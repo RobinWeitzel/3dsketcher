@@ -1,11 +1,13 @@
 const w = 800; // Width of the canvas
 const h = 800; // Height of the canvas
-let i = 0;
+
+let cameraLocked = false;
 
 
 // Creates a camera object and animates it around a box.
 let camera;
 let div;
+let button;
 function setup() {
   createCanvas(w, h, WEBGL);
   camera = createCamera();
@@ -13,7 +15,18 @@ function setup() {
   //camera.camera([x], [y], [z], [centerX], [centerY], [centerZ], [upX], [upY], [upZ]);
 
   div = createDiv('');
-  div.size(400, 400);
+  div.size(400, 100);
+
+  button = createButton('Lock camera');
+  button.mousePressed(() => {
+    cameraLocked = !cameraLocked;
+
+    if(cameraLocked) {
+      button.html('Unlock camera');
+    } else {
+      button.html('Lock camera');
+    }
+  });
 }
 
 // draws the background lines that make up the drawing board
@@ -55,7 +68,7 @@ function draw() {
 
   xyzAxis();
 
-  div.html(`Camera position:<br/> ${round(camera.eyeX)}, ${round(camera.eyeY)}, ${round(camera.eyeZ)}, <br/>${round(camera.centerX)}, ${round(camera.centerY)}, ${round(camera.centerZ)}, <br/>${round(camera.upX)}, ${round(camera.upY)}, ${round(camera.upZ)}, <br/>i: ${i}`);
+  div.html(`Camera position:<br/> ${round(camera.eyeX)}, ${round(camera.eyeY)}, ${round(camera.eyeZ)}, <br/>${round(camera.centerX)}, ${round(camera.centerY)}, ${round(camera.centerZ)}, <br/>${round(camera.upX)}, ${round(camera.upY)}, ${round(camera.upZ)}`);
 }
 
 function mouseDragged(){
@@ -66,5 +79,7 @@ function mouseDragged(){
 
   // the first three arguments enable or disable the rotation in that axis
   // 0 disables, 1 enables
-  orbitControl(1, 1, 1, options);
+  if(!cameraLocked) {
+    orbitControl(1, 1, 1, options);
+  }
 }
