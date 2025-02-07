@@ -43,19 +43,6 @@ The drawing plane needs to be rotated to match the camera angle
 function drawingPlane() {
   push();
   
-  // Calculate the vector from plane center (origin) to camera position
-  let dx = camera.eyeX - 0;
-  let dy = camera.eyeY - 0;
-  let dz = camera.eyeZ - 0;
-  
-  // Calculate rotation angles
-  let rotY = atan2(-dx, -dz);
-  let rotX = atan2(dy, sqrt(dx * dx + dz * dz));
-  
-  // Apply rotations
-  rotateY(rotY);
-  rotateX(rotX);
-  
   fill(0);
   stroke(0);
   plane(100);
@@ -81,21 +68,3 @@ function mouseDragged(){
   // 0 disables, 1 enables
   orbitControl(1, 1, 1, options);
 }
-/*
-function mouseClicked() {
-  const positions = [
-    [0, 0, 800],
-    [800, 0, 0],
-    [0, 0, -800],
-    [-800, 0, 0],
-  ];
-
-  if (i >= positions.length - 1) {
-    i = 0;
-  } else {
-    i++;
-  }
-
-  camera.setPosition(positions[i][0], positions[i][1], positions[i][2]);
-  camera.lookAt(0, 0, 0);
-}*/
