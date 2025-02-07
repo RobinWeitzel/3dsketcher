@@ -2,7 +2,8 @@ const w = 800; // Width of the canvas
 const h = 800; // Height of the canvas
 
 let cameraLocked = false;
-let drawingPoints = [];
+let drawings = [];
+let currentDrawingPoints = [];
 let isDrawing = false;
 
 // Creates a camera object and animates it around a box.
@@ -68,18 +69,34 @@ function draw() {
   drawingPlane();
   xyzAxis();
 
-  // Draw stored points
-  if (drawingPoints.length > 0) {
+  // Draw current drawing points
+  if (currentDrawingPoints.length > 0) {
     push();
     stroke(0);
     strokeWeight(2);
     noFill();
     beginShape();
-    for (let point of drawingPoints) {
+    for (let point of currentDrawingPoints) {
       vertex(point.x, point.y, 0);
     }
     endShape();
     pop();
+  }
+
+  // Draw all drawings
+  for(const drawingPoints of drawings) {
+    if (drawingPoints.length > 0) {
+      push();
+      stroke(0);
+      strokeWeight(2);
+      noFill();
+      beginShape();
+      for (let point of drawingPoints) {
+        vertex(point.x, point.y, 0);
+      }
+      endShape();
+      pop();
+    }
   }
 
   div.html(`Camera position:<br/> ${round(camera.eyeX)}, ${round(camera.eyeY)}, ${round(camera.eyeZ)}, <br/>${round(camera.centerX)}, ${round(camera.centerY)}, ${round(camera.centerZ)}, <br/>${round(camera.upX)}, ${round(camera.upY)}, ${round(camera.upZ)}`);
@@ -88,12 +105,13 @@ function draw() {
 function mousePressed() {
   if (cameraLocked) {
     isDrawing = true;
-    // drawingPoints = []; // Start a new drawing
+    currentDrawingPoints = []; // Start a new drawing
   }
 }
 
 function mouseReleased() {
   isDrawing = false;
+  drawings.push(currentDrawingPoints);
 }
 
 function mouseDragged() {
@@ -108,6 +126,6 @@ function mouseDragged() {
     // Convert mouse coordinates to world coordinates
     let x = mouseX - width/2;
     let y = mouseY - height/2;
-    drawingPoints.push({ x, y });
+    currentDrawingPoints.push({ x, y });
   }
 }
