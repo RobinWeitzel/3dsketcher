@@ -2,7 +2,8 @@ const w = 800; // Width of the canvas
 const h = 800; // Height of the canvas
 
 let cameraLocked = false;
-
+let drawingPoints = [];
+let isDrawing = false;
 
 // Creates a camera object and animates it around a box.
 let camera;
@@ -65,21 +66,48 @@ function drawingPlane() {
 function draw() {
   background(255);
   drawingPlane();
-
   xyzAxis();
+
+  // Draw stored points
+  if (drawingPoints.length > 0) {
+    push();
+    stroke(0);
+    strokeWeight(2);
+    noFill();
+    beginShape();
+    for (let point of drawingPoints) {
+      vertex(point.x, point.y, 0);
+    }
+    endShape();
+    pop();
+  }
 
   div.html(`Camera position:<br/> ${round(camera.eyeX)}, ${round(camera.eyeY)}, ${round(camera.eyeZ)}, <br/>${round(camera.centerX)}, ${round(camera.centerY)}, ${round(camera.centerZ)}, <br/>${round(camera.upX)}, ${round(camera.upY)}, ${round(camera.upZ)}`);
 }
 
-function mouseDragged(){
+function mousePressed() {
+  if (cameraLocked) {
+    isDrawing = true;
+    // drawingPoints = []; // Start a new drawing
+  }
+}
+
+function mouseReleased() {
+  isDrawing = false;
+}
+
+function mouseDragged() {
   let options = {
     disableTouchActions: true,
     freeRotation: false
   };
 
-  // the first three arguments enable or disable the rotation in that axis
-  // 0 disables, 1 enables
-  if(!cameraLocked) {
+  if (!cameraLocked) {
     orbitControl(1, 1, 1, options);
+  } else if (isDrawing) {
+    // Convert mouse coordinates to world coordinates
+    let x = mouseX - width/2;
+    let y = mouseY - height/2;
+    drawingPoints.push({ x, y });
   }
 }
