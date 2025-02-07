@@ -10,15 +10,17 @@ let isDrawing = false;
 let camera;
 let div;
 let button;
+
 function setup() {
   createCanvas(w, h, WEBGL);
   camera = createCamera();
-  // optionally, call camera() on the instance with the same arguments as the global function
-  //camera.camera([x], [y], [z], [centerX], [centerY], [centerZ], [upX], [upY], [upZ]);
+  camera.ortho(); // camera perspective, other options are perspective and frustum
 
+  // created div to display some variables to make troubleshooting easier
   div = createDiv('');
   div.size(400, 100);
 
+  // created button to lock/unlock camera position
   button = createButton('Lock camera');
   button.mousePressed(() => {
     cameraLocked = !cameraLocked;
