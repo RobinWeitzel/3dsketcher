@@ -56,9 +56,9 @@ The drawing plane needs to be rotated to match the camera angle
 function drawingPlane() {
   push();
   
-  fill(0);
-  stroke(0);
-  plane(100);
+  fill(255, 165, 0, 100); // Orange with alpha=100 for transparency
+  noStroke();
+  plane(h);
   pop();
 }
 
