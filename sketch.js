@@ -42,12 +42,20 @@ The drawing plane needs to be rotated to match the camera angle
 */
 function drawingPlane() {
   push();
-
-  const {x, y, z} = calculateAngles(0, 0, h, camera.centerX, camera.centerY, camera.centerZ, camera.eyeX, camera.eyeY, camera.eyeZ);
-  rotateX(x);
-  rotateY(y);
-  rotateZ(z);
-
+  
+  // Calculate the vector from plane center (origin) to camera position
+  let dx = camera.eyeX - 0;
+  let dy = camera.eyeY - 0;
+  let dz = camera.eyeZ - 0;
+  
+  // Calculate rotation angles
+  let rotY = atan2(-dx, -dz);
+  let rotX = atan2(dy, sqrt(dx * dx + dz * dz));
+  
+  // Apply rotations
+  rotateY(rotY);
+  rotateX(rotX);
+  
   fill(0);
   stroke(0);
   plane(100);
@@ -59,9 +67,8 @@ function draw() {
   drawingPlane();
 
   xyzAxis();
-  const {x, y, z} = calculateAngles(0, 0, h, camera.centerX, camera.centerY, camera.centerZ, camera.eyeX, camera.eyeY, camera.eyeZ);
 
-  div.html(`Camera position:<br/> ${round(camera.eyeX)}, ${round(camera.eyeY)}, ${round(camera.eyeZ)}, <br/>${round(camera.centerX)}, ${round(camera.centerY)}, ${round(camera.centerZ)}, <br/>${round(camera.upX)}, ${round(camera.upY)}, ${round(camera.upZ)}, <br/>i: ${i}, <br/>Angles:<br/>${x}, ${y}, ${z}`);
+  div.html(`Camera position:<br/> ${round(camera.eyeX)}, ${round(camera.eyeY)}, ${round(camera.eyeZ)}, <br/>${round(camera.centerX)}, ${round(camera.centerY)}, ${round(camera.centerZ)}, <br/>${round(camera.upX)}, ${round(camera.upY)}, ${round(camera.upZ)}, <br/>i: ${i}`);
 }
 
 function mouseDragged(){
@@ -70,7 +77,9 @@ function mouseDragged(){
     freeRotation: false
   };
 
-  orbitControl(1, 0, 0, options);
+  // the first three arguments enable or disable the rotation in that axis
+  // 0 disables, 1 enables
+  orbitControl(1, 1, 1, options);
 }
 /*
 function mouseClicked() {
