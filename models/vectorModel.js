@@ -20,6 +20,13 @@ class VectorModel extends GeometryModel {
   }
 
   /**
+   * @returns [number, number, number] the vector as an array
+   */
+  toArray() {
+    return [this.x, this.y, this.z];
+  }
+
+  /**
    * Checks if this vector is equal to another vector
    * @param VectorModel other
    * @returns boolean true if the vectors are equal, false otherwise
@@ -51,7 +58,7 @@ class VectorModel extends GeometryModel {
     if(magnitude === 0) {
       throw new Error('Cannot normalize the zero vector');
     }
-    
+
     return new VectorModel(this.x / magnitude, this.y / magnitude, this.z / magnitude);
   }
 

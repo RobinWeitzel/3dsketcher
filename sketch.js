@@ -13,6 +13,8 @@ let div;
 let button;
 let slider;
 
+const drawingPlane = new DrawablePlane(PlaneModelBuilder.buildUsingPointAndNormal(new VectorModel(0, 0, 0), new VectorModel(0, 0, 1)));
+
 function setup() {
   createCanvas(w, h, WEBGL);
   camera = createCamera();
@@ -62,21 +64,12 @@ function xyzAxis() {
   line(0, 0, 0, 0, 0, w);
 }
 
-/*
-The drawing plane needs to be rotated to match the camera angle
-*/
-function drawingPlane() {
-  fill(255, 165, 0, 100); // Orange with alpha=100 for transparency
-  noStroke();
-  plane(h);
-}
-
 function draw() {
   background(255);
   xyzAxis();
 
   translate(0, 0, planeZ);
-  drawingPlane();
+  drawingPlane.draw();
 
   // Draw current drawing points
   if (currentDrawingPoints.length > 0) {

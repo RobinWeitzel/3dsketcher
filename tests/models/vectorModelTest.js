@@ -13,6 +13,20 @@
   }
   TestCoordinatorService.addTest(toString_ReturnsStringRepresentation);
 
+  const toArray_ReturnsArrayRepresentation = () => {
+    // arrange
+    const vector = new VectorModel(1, 2, 3);
+
+    // act
+    const vectorArray = vector.toArray();
+
+    // assert
+    if(vectorArray[0] !== 1 || vectorArray[1] !== 2 || vectorArray[2] !== 3) {
+      throw new Error('Expected the array representation to be [1, 2, 3] but got ' + vectorArray);
+    }
+  }
+  TestCoordinatorService.addTest(toArray_ReturnsArrayRepresentation);
+
   const equals_EqualVectors_ReturnsTrue = () => {
     // arrange
     const vector1 = new VectorModel(1, 2, 3);
