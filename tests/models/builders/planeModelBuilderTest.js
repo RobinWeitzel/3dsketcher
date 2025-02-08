@@ -107,5 +107,54 @@
   };
   TestCoordinatorService.addTest(buildUsingThreeVectors_ThreeNonCollinearPoints_ReturnsPlaneModel);
 
+  const buildUsingFourVariables_FourNumbers_ReturnsPlaneModel = () => {
+    // arrange
+    const a = 1;
+    const b = 2;
+    const c = 3;
+    const d = 4;
 
+    // act
+    const plane = PlaneModelBuilder.buildUsingFourVariables(a, b, c, d);
+
+    // assert
+    if(!plane.getNormal().equals(new VectorModel(a, b, c))) {
+      throw new Error('Expected the plane to have the normal (1, 2, 3) but got ' + plane.getNormal());
+    }
+  };
+  TestCoordinatorService.addTest(buildUsingFourVariables_FourNumbers_ReturnsPlaneModel);
+
+  const buildUsingFourVariables_AZeroBZeroCZero_ThrowsError = () => {
+    // arrange
+    const a = 0;
+    const b = 0;
+    const c = 0;
+    const d = 4;
+
+    // act
+    const test = () => PlaneModelBuilder.buildUsingFourVariables(a, b, c, d);
+
+    // assert
+    if(!TestCoordinatorService.throwsError(test)) {
+      throw new Error('Expected an error to be thrown when a, b, and c are all 0');
+    }
+  };
+  TestCoordinatorService.addTest(buildUsingFourVariables_AZeroBZeroCZero_ThrowsError);
+
+  const buildUsingFourVariables_ANonNumber_ThrowsError = () => {
+    // arrange
+    const a = 'a';
+    const b = 2;
+    const c = 3;
+    const d = 4;
+
+    // act
+    const test = () => PlaneModelBuilder.buildUsingFourVariables(a, b, c, d);
+
+    // assert
+    if(!TestCoordinatorService.throwsError(test)) {
+      throw new Error('Expected an error to be thrown when a is not a number');
+    }
+  };
+  TestCoordinatorService.addTest(buildUsingFourVariables_ANonNumber_ThrowsError);
 }

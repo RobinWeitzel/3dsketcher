@@ -46,23 +46,23 @@
 
   const intersects_IntersectingPlane_ReturnsPoint = () => {
     // arrange
-    const line = new LineModel(1, 2, 3, 1, 2, 3);
-    const plane = new PlaneModel(1, 2, 3, 4);
+    const line = new LineModel(2, 1, 0, -1, 1, 3);
+    const plane = PlaneModelBuilder.buildUsingFourVariables(3, -2, 1, 10)
 
     // act
     const point = line.intersects(plane);
 
     // assert
-    if(!point.equals(new VectorModel(1, 2, 3))) {
-      throw new Error('Expected the point of intersection to be (1, 2, 3) but got ' + point);
+    if(!point.equals(new VectorModel(5, -2, -9))) {
+      throw new Error('Expected the point of intersection to be (5, -2, -9) but got ' + point);
     }
   };
   TestCoordinatorService.addTest(intersects_IntersectingPlane_ReturnsPoint);
 
   const intersects_ParallelPlane_ReturnsNull = () => {
     // arrange
-    const line = new LineModel(1, 2, 3, 1, 2, 3);
-    const plane = new PlaneModel(1, 2, 3, 0);
+    const line = new LineModel(2, 3, 5, 1, -2, -1);
+    const plane = PlaneModelBuilder.buildUsingFourVariables(2, 3, -4, 7)
 
     // act
     const point = line.intersects(plane);

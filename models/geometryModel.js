@@ -44,7 +44,26 @@ class GeometryModel {
     return this.getOrigin().add(this.getDirection().multiply(t2));
   }
 
+  /**
+   * @param {PlaneModel} other
+   */
   intersectsPlane(other) {
-    
+    const lineOrigin = this.getOrigin();
+    const lineDirection = this.getDirection();
+    const planeNormal = other.getNormal();
+    const dot = lineDirection.dot(planeNormal);
+
+    // Check if the line is parallel to the plane
+    // If the dot product is less than 0.0001, the line is parallel to the plane
+    // This is to account for floating point errors
+    if (Math.abs(dot) < 0.0001) {
+      // Parallel check
+      const dist = planeNormal.dot(lineOrigin.subtract(other.getOrigin()));
+      return Math.abs(dist) < 0.0001 ? null : null; // Either on the plane or no intersection
+    }
+
+    // Calculate intersection
+    const t = planeNormal.dot(other.getOrigin().subtract(lineOrigin)) / dot;
+    return lineOrigin.add(lineDirection.multiply(t));
   }
 }
