@@ -5,11 +5,13 @@ let cameraLocked = false;
 let drawings = [];
 let currentDrawingPoints = [];
 let isDrawing = false;
+let planeZ = 0; // Z position of the drawing plane
 
 // Creates a camera object and animates it around a box.
 let camera;
 let div;
 let button;
+let slider;
 
 function setup() {
   createCanvas(w, h, WEBGL);
@@ -30,6 +32,12 @@ function setup() {
     } else {
       button.html('Lock camera');
     }
+  });
+
+  // created slider to change drawing plane z position
+  slider = createSlider(-w, w, 0);
+  slider.input(() => {
+    planeZ = slider.value();
   });
 }
 
@@ -58,18 +66,17 @@ function xyzAxis() {
 The drawing plane needs to be rotated to match the camera angle
 */
 function drawingPlane() {
-  push();
-  
   fill(255, 165, 0, 100); // Orange with alpha=100 for transparency
   noStroke();
   plane(h);
-  pop();
 }
 
 function draw() {
   background(255);
-  drawingPlane();
   xyzAxis();
+
+  translate(0, 0, planeZ);
+  drawingPlane();
 
   // Draw current drawing points
   if (currentDrawingPoints.length > 0) {
@@ -79,7 +86,7 @@ function draw() {
     noFill();
     beginShape();
     for (let point of currentDrawingPoints) {
-      vertex(point.x, point.y, 0);
+      vertex(point.x, point.y, planeZ);
     }
     endShape();
     pop();

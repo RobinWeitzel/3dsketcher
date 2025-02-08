@@ -13,7 +13,19 @@
   </head>
 
   <body>
-    <script src="helper.js"></script>
+    <script src="models/geometryModel.js"></script>
+    <script src="models/vectorModel.js"></script>
+    <script src="models/lineModel.js"></script>
+    <script src="models/planeModel.js"></script>
+    <script src="models/builders/lineModelBuilder.js"></script>
+    <script src="models/builders/planeModelBuilder.js"></script>
+    <!-- TESTS -->
+    <script src="tests/testCoordinatorService.js"></script>
+    <script src="tests/models/geometryModelTest.js"></script>
+    <script src="tests/models/vectorModelTest.js"></script>
+    <script src="tests/models/builders/planeModelBuilderTest.js"></script>
+    <script>TestCoordinatorService.runTests();</script>
+
     <script src="sketch.js"></script>
   </body>
 </html>
