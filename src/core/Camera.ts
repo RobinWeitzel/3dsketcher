@@ -1,25 +1,31 @@
 import * as p5 from 'p5';
-import { COLORS } from '../utils/constants';
 
 export class Camera {
     private camera: p5.Camera;
     private p: p5;
     private isLocked: boolean = true;
-    private font: p5.Font | null = null;
+    private hudElement: HTMLDivElement;
     
     constructor(p: p5) {
         this.p = p;
-        
         this.camera = p.createCamera();
+        
+        // Create HUD element
+        this.hudElement = document.createElement('div');
+        this.hudElement.style.position = 'absolute';
+        this.hudElement.style.top = '10px';
+        this.hudElement.style.left = '10px';
+        this.hudElement.style.color = 'black';
+        this.hudElement.style.fontFamily = 'Arial';
+        this.hudElement.style.fontSize = '16px';
+        this.hudElement.style.zIndex = '1000';
+        document.body.appendChild(this.hudElement);
+        
         this.setupCamera();
     }
 
     private setupCamera(): void {
         this.camera.ortho();
-    }
-
-    setFont(font: p5.Font): void {
-        this.font = font;
     }
 
     public update(): void {
@@ -34,27 +40,8 @@ export class Camera {
     }
 
     private displayCameraState(): void {
-        if (this.font) {
-            // Save current camera state
-            this.p.push();
-            
-            // Switch to 2D mode
-            this.camera.ortho();
-            this.p.translate(-this.p.width/2, -this.p.height/2, 0);
-            
-            // Set up the text properties
-            this.p.textFont(this.font);
-            this.p.textSize(16);
-            this.p.textAlign(this.p.LEFT, this.p.TOP);
-            this.p.fill(COLORS.BLACK);
-            
-            // Draw the text
-            const state = this.isLocked ? "🔒 Camera Locked" : "🔓 Camera Unlocked";
-            this.p.text(state, 10, 10);
-            
-            // Restore the previous state
-            this.p.pop();
-        }
+        const state = this.isLocked ? "🔒 Camera Locked" : "🔓 Camera Unlocked";
+        this.hudElement.textContent = state;
     }
 
     public toggleLock(): void {
