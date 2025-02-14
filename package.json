@@ -1,15 +1,25 @@
 {
   "name": "3dsketcher",
-  "module": "index.ts",
-  "type": "module",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "test": "bun test",
-    "build": "bun build index.ts --outdir ./build"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "webpack serve --open",
+    "build": "webpack"
   },
+  "keywords": [],
+  "author": "Robin Weitzel",
+  "license": "MIT",
+  "description": "",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/p5": "^1.7.6",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.7.3",
+    "webpack": "^5.98.0",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
   },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+  "dependencies": {
+    "p5": "^1.11.3"
   }
 }
