@@ -22,4 +22,8 @@ class LineModel extends GeometryModel  {
     getDirection() {
         return this.direction;
     }
+
+    toString() {
+        return `Origin: ${this.origin}, direction: ${this.direction}`;
+    }
 }

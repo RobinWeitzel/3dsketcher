@@ -1,13 +1,13 @@
 class LineModelBuilder {
   /**
-   * Builds a LineModel using two points.
-   * @param [number, number, number] point1 first point on the vector with x, y, z coordinates
-   * @param [number, number, number] point1 first point on the vector with x, y, z coordinates 
+   * Builds a LineModel using two vectors.
+   * @param VectorModel v1 the origin of the line
+   * @param VectorModel v2 
    * @returns LineModel
    */
-  static buildUsingTwoPoints(point1, point2) {
-    const [x1, y1, z1] = point1;
-    const [x2, y2, z2] = point2;
+  static buildUsingTwoPoints(v1, v2) {
+    const [x1, y1, z1] = v1.toArray();
+    const [x2, y2, z2] = v2.toArray();
 
     // Calculate the direction of the vector
     const ax = x2 - x1;
