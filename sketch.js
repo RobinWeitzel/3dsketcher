@@ -14,6 +14,7 @@ let button;
 let slider;
 
 const drawingPlane = new DrawablePlane(PlaneModelBuilder.buildUsingPointAndNormal(new VectorModel(0, 0, 0), new VectorModel(0, 0, 1)));
+let drawableLine = null;
 
 function setup() {
   createCanvas(w, h, WEBGL);
@@ -79,7 +80,7 @@ function draw() {
     noFill();
     beginShape();
     for (let point of currentDrawingPoints) {
-      vertex(point.x, point.y, planeZ);
+      vertex(point.x, point.y, point.z);
     }
     endShape();
     pop();
@@ -94,11 +95,15 @@ function draw() {
       noFill();
       beginShape();
       for (let point of drawingPoints) {
-        vertex(point.x, point.y, 0);
+        vertex(point.x, point.y, point.z);
       }
       endShape();
       pop();
     }
+  }
+
+  if(drawableLine !== null) {
+    drawableLine.draw();
   }
 
   div.html(`Camera position:<br/> ${round(camera.eyeX)}, ${round(camera.eyeY)}, ${round(camera.eyeZ)}, <br/>${round(camera.centerX)}, ${round(camera.centerY)}, ${round(camera.centerZ)}, <br/>${round(camera.upX)}, ${round(camera.upY)}, ${round(camera.upZ)}`);
@@ -125,9 +130,17 @@ function mouseDragged() {
   if (!cameraLocked) {
     orbitControl(1, 1, 1, options);
   } else if (isDrawing) {
-    // Convert mouse coordinates to world coordinates
-    let x = mouseX - width/2;
-    let y = mouseY - height/2;
-    currentDrawingPoints.push({ x, y });
+    let x = mouseX - w/2;
+    let y = -(mouseY - h/2); // Flip y-axis since in p5 y-axis is flipped
+
+    const screenVector = new VectorModel(x, y, 0); // vector on screen where user drew
+    const cameraVector = new VectorModel(camera.eyeX, camera.eyeY, camera.eyeZ); // camera position
+    const line = LineModelBuilder.buildUsingTwoPoints(cameraVector, screenVector); // line from camera to screen
+
+    drawableLine = new DrawableLine(line);
+  }
+
+  function mouseMoved() {
+  
   }
 }
