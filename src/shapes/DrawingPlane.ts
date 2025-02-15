@@ -12,7 +12,7 @@ export class DrawingPlane {
     private isDrawing: boolean;
     private currentStroke: DrawingPoint[];
     private completedStrokes: DrawingPoint[][];
-
+    private normalPointInitalPosition: p5.Vector;
 
     constructor(width: number, height: number) {
         this.width = width;
@@ -20,6 +20,7 @@ export class DrawingPlane {
         this.isDrawing = false;
         this.currentStroke = [];
         this.completedStrokes = [];
+        this.normalPointInitalPosition = new p5.Vector(0, 0, CANVAS_HEIGHT);
     }
 
     draw(p: p5): void {
@@ -56,6 +57,10 @@ export class DrawingPlane {
         }
         
         p.pop();
+    }
+
+    getNormalPointInitalPosition(): p5.Vector {
+        return this.normalPointInitalPosition;
     }
 
     startDrawing(x: number, y: number): void {

@@ -1,5 +1,5 @@
 import * as p5 from 'p5';
-import { mat3, ReadonlyMat3 } from 'gl-matrix';
+import { mat3, mat4, ReadonlyMat3, vec3 } from 'gl-matrix';
 import { CANVAS_WIDTH, CANVAS_HEIGHT, COLORS } from './utils/constants';
 import { CoordinateAxes } from './shapes/CoordinateAxes';
 import { Camera } from './core/Camera';
@@ -15,7 +15,7 @@ let hudElement: HTMLDivElement;
 
 // Load font globally before starting
 p5.prototype.preload = function() {
-    font = this.loadFont('/assets/fonts/inconsolata.otf');
+    font = this.loadFont('assets/fonts/inconsolata.otf');
 };
 
 const sketch = (p: p5) => {
@@ -48,6 +48,53 @@ const sketch = (p: p5) => {
         coordinateAxes.draw(p);
         drawingPlane.draw(p);
     };
+
+    const getPlaneNormalPosition = () => {
+        const cam = cameraManager.getCamera();
+        const initalCamVector = new p5.Vector(0, 0, 800);
+        const initalCamVector_xy = new p5.Vector(initalCamVector.x, initalCamVector.y);
+        const initalCamVector_xz = new p5.Vector(initalCamVector.x, initalCamVector.z);
+        const initalCamVector_yz = new p5.Vector(initalCamVector.y, initalCamVector.z);
+        const currentCamVector = new p5.Vector(cam.eyeX, cam.eyeY, cam.eyeZ);
+        const currentCamVector_xy = new p5.Vector(currentCamVector.x, currentCamVector.y);
+        const currentCamVector_xz = new p5.Vector(currentCamVector.x, currentCamVector.z);
+        const currentCamVector_yz = new p5.Vector(currentCamVector.y, currentCamVector.z);
+
+        const xy_angle = initalCamVector_xy.angleBetween(currentCamVector_xy) || 0;
+        const xz_angle = initalCamVector_xz.angleBetween(currentCamVector_xz) || 0;
+        const yz_angle = initalCamVector_yz.angleBetween(currentCamVector_yz) || 0;
+
+        const Rx = mat3.fromValues(
+            1, 0, 0,
+            0, Math.cos(xz_angle), -Math.sin(xz_angle),
+            0, Math.sin(xz_angle), Math.cos(xz_angle)
+        );
+
+        const Ry = mat3.fromValues(
+            Math.cos(xy_angle), 0, Math.sin(xy_angle), 
+            0, 1, 0,
+            -Math.sin(xy_angle), 0, Math.cos(xy_angle)
+        );
+
+        const Rz = mat3.fromValues(
+            Math.cos(yz_angle), -Math.sin(yz_angle), 0,
+            Math.sin(yz_angle), Math.cos(yz_angle), 0,
+            0, 0, 1
+        );
+
+        let R = mat3.create();
+        mat3.mul(R, Rx, Ry);
+        mat3.mul(R, R, Rz);
+
+        const normalPointInitalPosition = drawingPlane.getNormalPointInitalPosition();
+        
+        const x = R[0] * normalPointInitalPosition.x + R[1] * normalPointInitalPosition.y + R[2] * normalPointInitalPosition.z;
+        const y = R[3] * normalPointInitalPosition.x + R[4] * normalPointInitalPosition.y + R[5] * normalPointInitalPosition.z;
+        const z = R[6] * normalPointInitalPosition.x + R[7] * normalPointInitalPosition.y + R[8] * normalPointInitalPosition.z;
+
+        console.log(`x: ${x} y: ${y} z: ${z}`);
+        console.log(`cam: ${cam.eyeX} ${cam.eyeY} ${cam.eyeZ}`);
+    }
 
     const getMousePositionOnPlane2 = () => {
         const cam = cameraManager.getCamera();
@@ -154,7 +201,7 @@ const sketch = (p: p5) => {
         
         if (cameraManager.isCurrentlyLocked()) {
             // When camera is locked, handle drawing
-            const { x, y } = getMousePositionOnPlane();
+            const { x, y } = getMousePositionOnPlane2();
             drawingPlane.startDrawing(x, y);
         } else {
             // When camera is unlocked, handle camera movement
@@ -167,11 +214,12 @@ const sketch = (p: p5) => {
         
         if (cameraManager.isCurrentlyLocked()) {
             // When camera is locked, handle drawing
-            const { x, y } = getMousePositionOnPlane();
+            const { x, y } = getMousePositionOnPlane2();
             drawingPlane.continueDrawing(x, y);
         } else {
             // When camera is unlocked, handle camera movement
             cameraManager.handleMouseDragged();
+            getPlaneNormalPosition();
         }
     };
 
