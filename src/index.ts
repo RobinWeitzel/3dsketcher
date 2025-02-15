@@ -3,6 +3,7 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT, COLORS } from './utils/constants';
 import { CoordinateAxes } from './shapes/CoordinateAxes';
 import { Camera } from './core/Camera';
 import { DrawingPlane } from './shapes/DrawingPlane';
+import { cross, normalize } from './utils/helper';
 
 let coordinateAxes: CoordinateAxes;
 let cameraManager: Camera;
@@ -37,12 +38,81 @@ const sketch = (p: p5) => {
 
     const getMousePositionOnPlane = () => {
         // Get mouse position relative to center
-        const mouseX = p.mouseX - p.width/2;
-        const mouseY = p.mouseY - p.height/2;
+        const mouseX = p.mouseX;
+        const mouseY = p.mouseY;
+
+        // Get the current camera
+        let cam = cameraManager.camera;
+
+        // Get the camera's eye (position) and center (lookAt point)
+        let camX = cam.eyeX;
+        let camY = cam.eyeY;
+        let camZ = cam.eyeZ;
+
+        let centerX = cam.centerX;
+        let centerY = cam.centerY;
+        let centerZ = cam.centerZ;
+
+        // Get camera's up vector
+        let upX = cam.upX;
+        let upY = cam.upY;
+        let upZ = cam.upZ;
+
+        // Compute camera's coordinate system
+        // Forward vector (camera's viewing direction)
+        let forward = normalize([camX - centerX, camY - centerY, camZ - centerZ]); // eye - center
+
+        // Right vector (perpendicular to forward and up vectors)
+        let right = normalize(cross([upX, upY, upZ], forward)); // cross(up, forward)
+
+        // Recompute up vector to ensure orthogonality
+        let up = cross(forward, right);
+
+        // Field of View and aspect ratio
+        let fov = Math.PI / 3; // Default field of view in p5.js is 60 degrees
+        let aspect = p.width / p.height;
+        let near = 1; // Arbitrary value, used for calculations
+
+        // Map mouse coordinates to Normalized Device Coordinates (NDC)
+        let ndcX = (mouseX / p.width) * 2 - 1;
+        let ndcY = (mouseY / p.height) * 2 - 1; // No inversion
+
+        // Compute dimensions of the near plane
+        let nearHeight = 2 * near * Math.tan(fov / 2);
+        let nearWidth = nearHeight * aspect;
+
+        // Compute point on near plane in camera space
+        let px = ndcX * nearWidth / 2;
+        let py = ndcY * nearHeight / 2;
+        let pz = -near; // Negative because camera looks along negative Z in camera space
+
+        // Transform the point to world space to get the direction vector
+        let dir: [number, number, number] = [
+            px * right[0] + py * up[0] + pz * forward[0],
+            px * right[1] + py * up[1] + pz * forward[1],
+            px * right[2] + py * up[2] + pz * forward[2]
+        ];
+
+        // Normalize the direction vector
+        dir = normalize(dir);
+
+        // Avoid division by zero if dir[2] is zero (ray is parallel to the plane)
+        if (dir[2] === 0) {
+            console.log('The ray is parallel to the plane z=0 and does not intersect.');
+            return;
+        }
+
+        // Compute the intersection with the plane z = 0
+        let t = -camZ / dir[2];
+        let x = camX + t * dir[0];
+        let y = camY + t * dir[1];
+
+        console.log(`Mouse position: x=${mouseX - p.width / 2}, y=${mouseY - p.height / 2}`);
+        console.log(`Point on plane z=0: x=${x}, y=${y}`);
     
         return {
-            x: mouseX,
-            y: mouseY
+            x: x,
+            y: y
         };
     };
 

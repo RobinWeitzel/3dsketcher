@@ -64,13 +64,6 @@ export class DrawingPlane {
         p.pop();
     }
 
-    /*projectPoints3dTo2d(p: p5): void {
-        const points2d: [[number, number], [number, number], [number, number], [number, number]] = [];
-
-        const projectionCalculator = new ProjectionCalculator2d(this.points3d, points2d);
-        projectionCalculator.
-    }*/
-
     startDrawing(x: number, y: number): void {
         this.isDrawing = true;
         this.currentStroke = [{x, y}];
