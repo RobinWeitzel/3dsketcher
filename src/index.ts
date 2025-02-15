@@ -263,7 +263,7 @@ const sketch = (p: p5) => {
         }
         if(p.key === 'y' || p.key === 'Y') {
             const cam = cameraManager.getCamera();
-            cam.setPosition(0, 0, 0);
+            cam.setPosition(0, 0, 800);
             cam.lookAt(0, 0, 0);
         }
         if(p.key === 'u' || p.key === 'U') {
@@ -274,6 +274,9 @@ const sketch = (p: p5) => {
         }
         if(p.key === 'o' || p.key === 'O') {
             p.perspective();
+        }
+        if(p.key === 'r' || p.key === 'R') {
+            drawingPlane.deleteAllStrokes();
         }
     };
 
@@ -313,10 +316,11 @@ const sketch = (p: p5) => {
             <strong>Hotkeys:</strong><br>
             L: Toggle camera lock<br>
             T: Set camera to isometric view (565, 0, 565)<br>
-            Y: Reset camera to origin (0, 0, 0)<br>
+            Y: Reset camera to origin (0, 0, 800)<br>
             U: Calculate mouse position (method 2)<br>
             P: Set perspective (60° FOV)<br>
             O: Reset perspective to default<br>
+            R: Delete all strokes<br>
             <br>
             <strong>Mouse Controls:</strong><br>
             • When camera is unlocked: Orbit camera<br>

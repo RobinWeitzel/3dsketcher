@@ -58,6 +58,11 @@ export class DrawingPlane {
         
         p.pop();
     }
+    
+    deleteAllStrokes(): void {
+        this.completedStrokes = [];
+        this.currentStroke = [];
+    }
 
     getNormalPointInitalPosition(): p5.Vector {
         return this.normalPointInitalPosition;
