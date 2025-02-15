@@ -12,6 +12,7 @@ let drawingPlane: DrawingPlane;
 let font: p5.Font;
 let isSetup = false;
 let hudElement: HTMLDivElement;
+let activeMousePositionMethod = 3;
 
 // Load font globally before starting
 p5.prototype.preload = function() {
@@ -216,8 +217,16 @@ const sketch = (p: p5) => {
         
         if (cameraManager.isCurrentlyLocked()) {
             // When camera is locked, handle drawing
-            const { x, y } = getMousePositionOnPlane3();
-            drawingPlane.startDrawing(x, y);
+            if(activeMousePositionMethod === 1) {
+                const { x, y } = getMousePositionOnPlane();
+                drawingPlane.startDrawing(x, y);
+            } else if(activeMousePositionMethod === 2) {
+                const { x, y } = getMousePositionOnPlane2();
+                drawingPlane.startDrawing(x, y);
+            } else if(activeMousePositionMethod === 3) {
+                const { x, y } = getMousePositionOnPlane3();
+                drawingPlane.startDrawing(x, y);
+            }
         } else {
             // When camera is unlocked, handle camera movement
             cameraManager.handleMousePressed();
@@ -229,8 +238,16 @@ const sketch = (p: p5) => {
         
         if (cameraManager.isCurrentlyLocked()) {
             // When camera is locked, handle drawing
-            const { x, y } = getMousePositionOnPlane3();
-            drawingPlane.continueDrawing(x, y);
+            if(activeMousePositionMethod === 1) {
+                const { x, y } = getMousePositionOnPlane();
+                drawingPlane.continueDrawing(x, y);
+            } else if(activeMousePositionMethod === 2) {
+                const { x, y } = getMousePositionOnPlane2();
+                drawingPlane.continueDrawing(x, y);
+            } else if(activeMousePositionMethod === 3) {
+                const { x, y } = getMousePositionOnPlane3();
+                drawingPlane.continueDrawing(x, y);
+            }
         } else {
             // When camera is unlocked, handle camera movement
             cameraManager.handleMouseDragged();
@@ -278,6 +295,12 @@ const sketch = (p: p5) => {
         if(p.key === 'r' || p.key === 'R') {
             drawingPlane.deleteAllStrokes();
         }
+        if(p.key === 'm' || p.key === 'M') {
+            activeMousePositionMethod++;
+            if(activeMousePositionMethod > 3) {
+                activeMousePositionMethod = 1;
+            }
+        }
     };
 
     // Add updateHUD function after setup
@@ -313,6 +336,9 @@ const sketch = (p: p5) => {
             X: ${pos3.x.toString().slice(0, 8)}<br>
             Y: ${pos3.y.toString().slice(0, 8)}<br>
             <br>
+            <strong>Active Mouse Position Method:</strong><br>
+            ${activeMousePositionMethod}<br>
+            <br>
             <strong>Hotkeys:</strong><br>
             L: Toggle camera lock<br>
             T: Set camera to isometric view (565, 0, 565)<br>
@@ -321,6 +347,7 @@ const sketch = (p: p5) => {
             P: Set perspective (60° FOV)<br>
             O: Reset perspective to default<br>
             R: Delete all strokes<br>
+            M: Change mouse position method<br>
             <br>
             <strong>Mouse Controls:</strong><br>
             • When camera is unlocked: Orbit camera<br>
