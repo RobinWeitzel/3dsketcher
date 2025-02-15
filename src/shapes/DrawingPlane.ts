@@ -12,12 +12,7 @@ export class DrawingPlane {
     private isDrawing: boolean;
     private currentStroke: DrawingPoint[];
     private completedStrokes: DrawingPoint[][];
-    private points3d: [[number, number], [number, number], [number, number], [number, number]] = [
-        [0, 0],
-        [CANVAS_WIDTH, 0],
-        [CANVAS_WIDTH, CANVAS_HEIGHT],
-        [0, CANVAS_HEIGHT]
-    ]
+
 
     constructor(width: number, height: number) {
         this.width = width;

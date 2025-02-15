@@ -1,4 +1,5 @@
 import * as p5 from 'p5';
+import { mat3, ReadonlyMat3 } from 'gl-matrix';
 import { CANVAS_WIDTH, CANVAS_HEIGHT, COLORS } from './utils/constants';
 import { CoordinateAxes } from './shapes/CoordinateAxes';
 import { Camera } from './core/Camera';
@@ -10,6 +11,7 @@ let cameraManager: Camera;
 let drawingPlane: DrawingPlane;
 let font: p5.Font;
 let isSetup = false;
+let hudElement: HTMLDivElement;
 
 // Load font globally before starting
 p5.prototype.preload = function() {
@@ -25,6 +27,17 @@ const sketch = (p: p5) => {
         cameraManager = new Camera(p);
         drawingPlane = new DrawingPlane(CANVAS_WIDTH - 400, CANVAS_WIDTH - 400);
         isSetup = true;
+
+        // Create HUD element
+        hudElement = document.createElement('div');
+        hudElement.style.position = 'absolute';
+        hudElement.style.top = '10px';
+        hudElement.style.left = '10px';
+        hudElement.style.color = 'black';
+        hudElement.style.fontFamily = 'Arial';
+        hudElement.style.fontSize = '16px';
+        hudElement.style.zIndex = '1000';
+        document.body.appendChild(hudElement);
     };
 
     p.draw = () => {
@@ -35,6 +48,48 @@ const sketch = (p: p5) => {
         coordinateAxes.draw(p);
         drawingPlane.draw(p);
     };
+
+    const getMousePositionOnPlane2 = () => {
+        const cam = cameraManager.getCamera();
+        const mouseX = p.mouseX - CANVAS_WIDTH / 2;
+        const mouseY = p.mouseY - CANVAS_HEIGHT / 2;
+        
+        const initalCamVector = new p5.Vector(0, 800);
+        const currentCamVector = new p5.Vector(cam.eyeX, cam.eyeZ);
+
+        const angle = p.acos(initalCamVector.dot(currentCamVector) / (initalCamVector.mag() * currentCamVector.mag()));
+
+        const Ry = [
+            Math.cos(angle), 0, Math.sin(angle), 
+            0, 1, 0,
+            -Math.sin(angle), 0, Math.cos(angle)
+        ]
+
+        const Ry_diag = [
+            Math.cos(angle), Math.cos(angle), Math.cos(angle),
+            1, 1, 1,
+            Math.cos(angle), Math.cos(angle), Math.cos(angle)
+        ]
+        
+        const Apy = Ry.map((value, index) => 
+            Ry_diag[index] !== 0 ? value / Ry_diag[index] : 0
+        );
+
+        const result = [0,0,0]
+        const mouseVec = [mouseX, mouseY, 0];
+        for(let i = 0; i < Apy.length; i++) {
+            const p = Math.floor(i/3);
+            result[p] += mouseVec[p] * Apy[i];
+        }
+
+        console.log(`mouseVec: ${mouseVec}`);
+        console.log(`x: ${result[0]} y: ${result[1]}`);
+
+        return {
+            x: result[0],
+            y: result[1]
+        }
+    }
 
     const getMousePositionOnPlane = () => {
         const cam = cameraManager.getCamera();
@@ -136,6 +191,20 @@ const sketch = (p: p5) => {
         if (!isSetup) return;
         if (p.key === 'l' || p.key === 'L') {
             cameraManager.toggleLock();
+        }
+   
+        if(p.key === 't' || p.key === 'T') {
+            const cam = cameraManager.getCamera();
+            cam.setPosition(565, 0, 565);
+            cam.lookAt(0, 0, 0);
+        }
+        if(p.key === 'y' || p.key === 'Y') {
+            const cam = cameraManager.getCamera();
+            cam.setPosition(0, 0, 0);
+            cam.lookAt(0, 0, 0);
+        }
+        if(p.key === 'u' || p.key === 'U') {
+            getMousePositionOnPlane2();
         }
     };
 };
