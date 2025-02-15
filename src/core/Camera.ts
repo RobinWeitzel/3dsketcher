@@ -1,7 +1,7 @@
 import * as p5 from 'p5';
 
 export class Camera {
-    public camera: p5.Camera;
+    private camera: p5.Camera;
     private p: p5;
     private isLocked: boolean = true;
     private hudElement: HTMLDivElement;
@@ -27,6 +27,10 @@ export class Camera {
     private setupCamera(): void {
         this.camera.ortho();
         this.p.perspective(Math.PI / 3, this.p.width / this.p.height);
+    }
+
+    public getCamera(): p5.Camera {
+        return this.camera;
     }
 
     public update(): void {

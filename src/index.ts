@@ -37,33 +37,14 @@ const sketch = (p: p5) => {
     };
 
     const getMousePositionOnPlane = () => {
-        // Get mouse position relative to center
-        const mouseX = p.mouseX;
-        const mouseY = p.mouseY;
-
-        // Get the current camera
-        let cam = cameraManager.camera;
-
-        // Get the camera's eye (position) and center (lookAt point)
-        let camX = cam.eyeX;
-        let camY = cam.eyeY;
-        let camZ = cam.eyeZ;
-
-        let centerX = cam.centerX;
-        let centerY = cam.centerY;
-        let centerZ = cam.centerZ;
-
-        // Get camera's up vector
-        let upX = cam.upX;
-        let upY = cam.upY;
-        let upZ = cam.upZ;
+        const cam = cameraManager.getCamera();
 
         // Compute camera's coordinate system
         // Forward vector (camera's viewing direction)
-        let forward = normalize([camX - centerX, camY - centerY, camZ - centerZ]); // eye - center
+        let forward = normalize([cam.eyeX - cam.centerX, cam.eyeY - cam.centerY, cam.eyeZ - cam.centerZ]); // eye - center
 
         // Right vector (perpendicular to forward and up vectors)
-        let right = normalize(cross([upX, upY, upZ], forward)); // cross(up, forward)
+        let right = normalize(cross([cam.upX, cam.upY, cam.upZ], forward)); // cross(up, forward)
 
         // Recompute up vector to ensure orthogonality
         let up = cross(forward, right);
@@ -74,8 +55,8 @@ const sketch = (p: p5) => {
         let near = 1; // Arbitrary value, used for calculations
 
         // Map mouse coordinates to Normalized Device Coordinates (NDC)
-        let ndcX = (mouseX / p.width) * 2 - 1;
-        let ndcY = (mouseY / p.height) * 2 - 1; // No inversion
+        let ndcX = (p.mouseX / p.width) * 2 - 1;
+        let ndcY = (p.mouseY / p.height) * 2 - 1; // No inversion
 
         // Compute dimensions of the near plane
         let nearHeight = 2 * near * Math.tan(fov / 2);
@@ -103,12 +84,9 @@ const sketch = (p: p5) => {
         }
 
         // Compute the intersection with the plane z = 0
-        let t = -camZ / dir[2];
-        let x = camX + t * dir[0];
-        let y = camY + t * dir[1];
-
-        console.log(`Mouse position: x=${mouseX - p.width / 2}, y=${mouseY - p.height / 2}`);
-        console.log(`Point on plane z=0: x=${x}, y=${y}`);
+        let t = -cam.eyeZ / dir[2];
+        let x = cam.eyeX + t * dir[0];
+        let y = cam.eyeY + t * dir[1];
     
         return {
             x: x,

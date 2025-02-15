@@ -1,6 +1,5 @@
 import * as p5 from 'p5';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, COLORS } from '../utils/constants';
-import { ProjectionCalculator2d } from 'projection-3d-2d';
 
 interface DrawingPoint {
     x: number;
