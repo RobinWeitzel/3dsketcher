@@ -269,6 +269,12 @@ const sketch = (p: p5) => {
         if(p.key === 'u' || p.key === 'U') {
             getMousePositionOnPlane2();
         }
+        if(p.key === 'p' || p.key === 'P') {
+            p.perspective(Math.PI / 3, p.width / p.height);
+        }
+        if(p.key === 'o' || p.key === 'O') {
+            p.perspective();
+        }
     };
 
     // Add updateHUD function after setup
