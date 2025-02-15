@@ -28,14 +28,17 @@ const sketch = (p: p5) => {
         drawingPlane = new DrawingPlane(CANVAS_WIDTH - 400, CANVAS_WIDTH - 400);
         isSetup = true;
 
-        // Create HUD element
+        // Update HUD element styles
         hudElement = document.createElement('div');
         hudElement.style.position = 'absolute';
         hudElement.style.top = '10px';
-        hudElement.style.left = '10px';
+        hudElement.style.right = '10px'; // Changed from left to right
         hudElement.style.color = 'black';
-        hudElement.style.fontFamily = 'Arial';
-        hudElement.style.fontSize = '16px';
+        hudElement.style.fontFamily = 'monospace'; // Changed to monospace for better alignment
+        hudElement.style.fontSize = '14px';
+        hudElement.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'; // Added semi-transparent background
+        hudElement.style.padding = '10px';
+        hudElement.style.borderRadius = '5px';
         hudElement.style.zIndex = '1000';
         document.body.appendChild(hudElement);
     };
@@ -47,6 +50,7 @@ const sketch = (p: p5) => {
         cameraManager.update();
         coordinateAxes.draw(p);
         drawingPlane.draw(p);
+        updateHUD();
     };
 
     const getPlaneNormalPosition = () => {
@@ -138,6 +142,17 @@ const sketch = (p: p5) => {
         }
     }
 
+    const getMousePositionOnPlane3 = () => {
+        const cam = cameraManager.getCamera();
+        const mouseX = p.mouseX - CANVAS_WIDTH / 2;
+        const mouseY = p.mouseY - CANVAS_HEIGHT / 2;
+        
+        return {
+            x: mouseX,
+            y: mouseY
+        }
+    }
+
     const getMousePositionOnPlane = () => {
         const cam = cameraManager.getCamera();
 
@@ -201,7 +216,7 @@ const sketch = (p: p5) => {
         
         if (cameraManager.isCurrentlyLocked()) {
             // When camera is locked, handle drawing
-            const { x, y } = getMousePositionOnPlane2();
+            const { x, y } = getMousePositionOnPlane3();
             drawingPlane.startDrawing(x, y);
         } else {
             // When camera is unlocked, handle camera movement
@@ -214,7 +229,7 @@ const sketch = (p: p5) => {
         
         if (cameraManager.isCurrentlyLocked()) {
             // When camera is locked, handle drawing
-            const { x, y } = getMousePositionOnPlane2();
+            const { x, y } = getMousePositionOnPlane3();
             drawingPlane.continueDrawing(x, y);
         } else {
             // When camera is unlocked, handle camera movement
@@ -254,6 +269,41 @@ const sketch = (p: p5) => {
         if(p.key === 'u' || p.key === 'U') {
             getMousePositionOnPlane2();
         }
+    };
+
+    // Add updateHUD function after setup
+    const updateHUD = () => {
+        if (!hudElement) return;
+        
+        const cam = cameraManager.getCamera();
+        const mouseX = p.mouseX - CANVAS_WIDTH / 2;
+        const mouseY = p.mouseY - CANVAS_HEIGHT / 2;
+        
+        const pos1 = getMousePositionOnPlane() || { x: 'N/A', y: 'N/A' };
+        const pos2 = getMousePositionOnPlane2() || { x: 'N/A', y: 'N/A' };
+        const pos3 = getMousePositionOnPlane3() || { x: 'N/A', y: 'N/A' };
+        
+        hudElement.innerHTML = `
+            <strong>Mouse Coordinates:</strong><br>
+            X: ${mouseX.toFixed(2)}, Y: ${mouseY.toFixed(2)}<br>
+            <br>
+            <strong>Camera Position:</strong><br>
+            X: ${cam.eyeX.toFixed(2)}<br>
+            Y: ${cam.eyeY.toFixed(2)}<br>
+            Z: ${cam.eyeZ.toFixed(2)}<br>
+            <br>
+            <strong>Plane Position 1:</strong><br>
+            X: ${pos1.x.toString().slice(0, 8)}<br>
+            Y: ${pos1.y.toString().slice(0, 8)}<br>
+            <br>
+            <strong>Plane Position 2:</strong><br>
+            X: ${pos2.x.toString().slice(0, 8)}<br>
+            Y: ${pos2.y.toString().slice(0, 8)}<br>
+            <br>
+            <strong>Plane Position 3:</strong><br>
+            X: ${pos3.x.toString().slice(0, 8)}<br>
+            Y: ${pos3.y.toString().slice(0, 8)}
+        `;
     };
 };
 

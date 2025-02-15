@@ -26,7 +26,7 @@ export class Camera {
 
     private setupCamera(): void {
         this.camera.ortho();
-        this.p.perspective(Math.PI / 3, this.p.width / this.p.height);
+        //this.p.perspective(Math.PI / 3, this.p.width / this.p.height);
     }
 
     public getCamera(): p5.Camera {
