@@ -308,7 +308,19 @@ const sketch = (p: p5) => {
             <br>
             <strong>Plane Position 3:</strong><br>
             X: ${pos3.x.toString().slice(0, 8)}<br>
-            Y: ${pos3.y.toString().slice(0, 8)}
+            Y: ${pos3.y.toString().slice(0, 8)}<br>
+            <br>
+            <strong>Hotkeys:</strong><br>
+            L: Toggle camera lock<br>
+            T: Set camera to isometric view (565, 0, 565)<br>
+            Y: Reset camera to origin (0, 0, 0)<br>
+            U: Calculate mouse position (method 2)<br>
+            P: Set perspective (60° FOV)<br>
+            O: Reset perspective to default<br>
+            <br>
+            <strong>Mouse Controls:</strong><br>
+            • When camera is unlocked: Orbit camera<br>
+            • When camera is locked: Draw on plane
         `;
     };
 };
