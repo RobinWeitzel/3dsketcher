@@ -1,24 +1,20 @@
 // src/InputHandler.js
 import * as THREE from 'three';
 
-const TOUCH_ROTATION_SENSITIVITY = 0.01;
-
 export class InputHandler {
-  constructor(canvas, camera, drawingPlane, strokeManager, modeController, orbitControls, rotationController) {
+  constructor(canvas, camera, drawingPlane, strokeManager, modeController, orbitControls, planeHandles) {
     this.canvas = canvas;
     this.camera = camera;
     this.drawingPlane = drawingPlane;
     this.strokeManager = strokeManager;
     this.modeController = modeController;
     this.orbitControls = orbitControls;
-    this.rotationController = rotationController;
+    this.planeHandles = planeHandles;
 
     this.isDrawing = false;
     this.isErasing = false;
 
-    // Touch rotation state (for plane mode)
-    this._touchPrev = null;
-    this._isTouchRotating = false;
+    this._raycaster = new THREE.Raycaster();
 
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onPointerMove = this._onPointerMove.bind(this);
@@ -29,26 +25,18 @@ export class InputHandler {
     canvas.addEventListener('pointerup', this._onPointerUp);
     canvas.addEventListener('pointercancel', this._onPointerUp);
 
-    // Capturing phase: disable OrbitControls during pen input or plane-mode touch
+    // Capturing phase: disable OrbitControls during pen input
     document.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'pen' && e.target === canvas) {
-        this.orbitControls.enabled = false;
-      }
-      if (e.pointerType === 'touch' && e.target === canvas && this.modeController.mode === 'plane') {
         this.orbitControls.enabled = false;
       }
     }, true);
 
     document.addEventListener('pointerup', (e) => {
-      if (e.pointerType === 'pen' || e.pointerType === 'touch') {
-        this.orbitControls.enabled = this.modeController.mode === 'camera';
+      if (e.pointerType === 'pen') {
+        this.orbitControls.enabled = true;
       }
     }, true);
-
-    // Sync OrbitControls enabled state on mode change
-    modeController.onModeChange((mode) => {
-      this.orbitControls.enabled = mode === 'camera';
-    });
   }
 
   _getNDC(e) {
@@ -59,97 +47,98 @@ export class InputHandler {
   }
 
   _onPointerDown(e) {
-    // Pen: always draw/erase
-    if (e.pointerType === 'pen') {
-      const ndc = this._getNDC(e);
+    if (e.pointerType !== 'pen') return;
 
-      if (this.modeController.eraserActive) {
-        const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
-        if (point) {
-          const stroke = this.strokeManager.findNearestStroke(point);
-          if (stroke) this.strokeManager.removeStroke(stroke);
-        }
-        this.isErasing = true;
-        e.preventDefault();
-        return;
+    const ndc = this._getNDC(e);
+
+    // Adjusting mode — check handle hit, ignore pen input otherwise
+    if (this.modeController.adjustingPlane) {
+      this._raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), this.camera);
+      const hit = this.planeHandles.hitTest(this._raycaster.ray);
+      if (hit) {
+        this.planeHandles.beginDrag(hit, this._raycaster.ray);
       }
-
-      const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
-      if (!point) return;
-
-      this.isDrawing = true;
-      this.strokeManager.beginStroke(point);
       e.preventDefault();
       return;
     }
 
-    // Touch in plane mode: rotate drawing plane
-    if (e.pointerType === 'touch' && this.modeController.mode === 'plane') {
-      this._touchPrev = { x: e.clientX, y: e.clientY };
-      this._isTouchRotating = true;
+    // Eraser
+    if (this.modeController.eraserActive) {
+      const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
+      if (point) {
+        const stroke = this.strokeManager.findNearestStroke(point);
+        if (stroke) this.strokeManager.removeStroke(stroke);
+      }
+      this.isErasing = true;
       e.preventDefault();
+      return;
     }
+
+    // Draw
+    const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
+    if (!point) return;
+
+    this.isDrawing = true;
+    this.strokeManager.beginStroke(point);
+    e.preventDefault();
   }
 
   _onPointerMove(e) {
-    // Pen: draw/erase
-    if (e.pointerType === 'pen') {
-      if (this.isErasing) {
-        const ndc = this._getNDC(e);
-        const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
-        if (point) {
-          const stroke = this.strokeManager.findNearestStroke(point);
-          if (stroke) this.strokeManager.removeStroke(stroke);
-        }
-        e.preventDefault();
-        return;
-      }
+    if (e.pointerType !== 'pen') return;
 
-      if (!this.isDrawing) return;
+    // Handle dragging
+    if (this.planeHandles.activeHandle) {
+      const ndc = this._getNDC(e);
+      this._raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), this.camera);
+      this.planeHandles.drag(this._raycaster.ray);
+      e.preventDefault();
+      return;
+    }
 
+    // Eraser
+    if (this.isErasing) {
       const ndc = this._getNDC(e);
       const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
       if (point) {
-        this.strokeManager.addPoint(point);
+        const stroke = this.strokeManager.findNearestStroke(point);
+        if (stroke) this.strokeManager.removeStroke(stroke);
       }
       e.preventDefault();
       return;
     }
 
-    // Touch in plane mode: rotate drawing plane
-    if (this._isTouchRotating && e.pointerType === 'touch') {
-      const dx = e.clientX - this._touchPrev.x;
-      const dy = e.clientY - this._touchPrev.y;
-      this._touchPrev = { x: e.clientX, y: e.clientY };
+    // Draw
+    if (!this.isDrawing) return;
 
-      this.rotationController.applyRotation(
-        this.drawingPlane.group,
-        dx * TOUCH_ROTATION_SENSITIVITY,
-        -dy * TOUCH_ROTATION_SENSITIVITY,
-        0
-      );
-      e.preventDefault();
+    const ndc = this._getNDC(e);
+    const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
+    if (point) {
+      this.strokeManager.addPoint(point);
     }
+    e.preventDefault();
   }
 
   _onPointerUp(e) {
-    if (e.pointerType === 'pen') {
-      if (this.isErasing) {
-        this.isErasing = false;
-        e.preventDefault();
-        return;
-      }
+    if (e.pointerType !== 'pen') return;
 
-      if (!this.isDrawing) return;
-
-      this.isDrawing = false;
-      this.strokeManager.endStroke();
+    // End handle drag
+    if (this.planeHandles.activeHandle) {
+      this.planeHandles.endDrag();
       e.preventDefault();
       return;
     }
 
-    if (e.pointerType === 'touch') {
-      this._isTouchRotating = false;
+    // Eraser
+    if (this.isErasing) {
+      this.isErasing = false;
+      e.preventDefault();
+      return;
     }
+
+    // Draw
+    if (!this.isDrawing) return;
+    this.isDrawing = false;
+    this.strokeManager.endStroke();
+    e.preventDefault();
   }
 }
