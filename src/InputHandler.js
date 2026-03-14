@@ -1,4 +1,5 @@
 // src/InputHandler.js
+import * as THREE from 'three';
 import { Mode } from './ModeController.js';
 
 export class InputHandler {
@@ -10,6 +11,7 @@ export class InputHandler {
     this.modeController = modeController;
 
     this.isDrawing = false;
+    this.activeTouches = new Map();
 
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onPointerMove = this._onPointerMove.bind(this);
@@ -29,6 +31,17 @@ export class InputHandler {
   }
 
   _onPointerDown(e) {
+    // Track touch points for plane manipulation in DRAW mode
+    if (e.pointerType === 'touch' && this.modeController.mode === Mode.DRAW) {
+      this.activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // Store the angle between two touches for rotation tracking
+      if (this.activeTouches.size === 2) {
+        this._prevTouchAngle = this._computeTouchAngle();
+      }
+      e.preventDefault();
+      return;
+    }
+
     if (e.pointerType !== 'pen') return;
     if (this.modeController.mode !== Mode.DRAW) return;
 
@@ -52,6 +65,36 @@ export class InputHandler {
   }
 
   _onPointerMove(e) {
+    // Handle touch drag for plane manipulation in DRAW mode
+    if (e.pointerType === 'touch' && this.modeController.mode === Mode.DRAW) {
+      if (!this.activeTouches.has(e.pointerId)) return;
+
+      const prev = this.activeTouches.get(e.pointerId);
+      const dx = e.clientX - prev.x;
+      const dy = e.clientY - prev.y;
+
+      if (this.activeTouches.size === 1) {
+        // Single touch drag — translate the plane
+        this._translatePlane(dx, dy);
+      } else if (this.activeTouches.size === 2) {
+        // Two-finger twist — rotate the plane, and also translate
+        // Update this touch before computing angle
+        this.activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const currentAngle = this._computeTouchAngle();
+        if (this._prevTouchAngle !== undefined) {
+          const deltaAngle = currentAngle - this._prevTouchAngle;
+          this._rotatePlane(deltaAngle);
+        }
+        this._prevTouchAngle = currentAngle;
+        e.preventDefault();
+        return;
+      }
+
+      this.activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      e.preventDefault();
+      return;
+    }
+
     if (!this.isDrawing) return;
     if (e.pointerType !== 'pen') return;
 
@@ -64,10 +107,54 @@ export class InputHandler {
   }
 
   _onPointerUp(e) {
+    // Clean up touch tracking
+    if (e.pointerType === 'touch') {
+      this.activeTouches.delete(e.pointerId);
+      if (this.activeTouches.size < 2) {
+        this._prevTouchAngle = undefined;
+      }
+      return;
+    }
+
     if (!this.isDrawing) return;
     if (e.pointerType !== 'pen') return;
 
     this.isDrawing = false;
     this.strokeManager.endStroke();
+  }
+
+  /**
+   * Translate the drawing plane along camera right/up vectors based on screen-space deltas.
+   */
+  _translatePlane(dx, dy) {
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3();
+    this.camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+    // Scale movement by camera distance to plane for consistent feel
+    const dist = this.camera.position.distanceTo(this.drawingPlane.group.position);
+    const sensitivity = dist * 0.002;
+
+    const offset = new THREE.Vector3()
+      .addScaledVector(right, dx * sensitivity)
+      .addScaledVector(up, -dy * sensitivity);
+
+    this.drawingPlane.group.position.add(offset);
+  }
+
+  /**
+   * Rotate the drawing plane around its normal axis by the given angle (radians).
+   */
+  _rotatePlane(deltaAngle) {
+    const normal = this.drawingPlane.getNormal();
+    this.drawingPlane.group.rotateOnAxis(normal, deltaAngle);
+  }
+
+  /**
+   * Compute the angle (radians) of the line between two active touch points.
+   */
+  _computeTouchAngle() {
+    const pts = Array.from(this.activeTouches.values());
+    return Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
   }
 }
