@@ -27,7 +27,8 @@ const inputHandler = new InputHandler(
   drawingPlane,
   strokeManager,
   modeController,
-  sceneManager.orbitControls
+  sceneManager.orbitControls,
+  rotationController
 );
 
 const rotationCube = new RotationCube(drawingPlane, rotationController);
