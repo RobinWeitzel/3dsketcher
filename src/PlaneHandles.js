@@ -41,7 +41,9 @@ export class PlaneHandles {
     this.scene.add(this._distanceLabel);
     this._distanceLabel.visible = false;
 
-    // Rotation angle label
+    // Rotation tracking (persistent across drags on same axis)
+    this._rotationOriginQuat = null; // quaternion when tracking started
+    this._rotationHandleName = null; // which ring is being tracked
     this._rotationLabel = this._createLabel();
     this.scene.add(this._rotationLabel);
     this._rotationLabel.visible = false;
@@ -117,6 +119,8 @@ export class PlaneHandles {
     for (const m of this._meshes) m.visible = false;
     this._resetColors();
     this._distanceOrigin = null;
+    this._rotationOriginQuat = null;
+    this._rotationHandleName = null;
     if (this._distanceLabel) this._distanceLabel.visible = false;
     if (this._rotationLabel) this._rotationLabel.visible = false;
   }
@@ -227,10 +231,21 @@ export class PlaneHandles {
       if (!this._distanceOrigin) {
         this._distanceOrigin = this._arrowOrigin.clone();
       }
+
+      // Reset rotation tracking on push/pull
+      this._rotationOriginQuat = null;
+      this._rotationHandleName = null;
+      this._rotationLabel.visible = false;
     } else {
       // Reset distance tracking on rotation
       this._distanceOrigin = null;
       this._distanceLabel.visible = false;
+
+      // Reset rotation tracking if switching to a different axis
+      if (this._rotationHandleName !== handleName) {
+        this._rotationOriginQuat = this.drawingPlane.group.quaternion.clone();
+        this._rotationHandleName = handleName;
+      }
 
       const mats = { ringA: this._ringAMaterial, ringB: this._ringBMaterial, ringC: this._ringCMaterial };
       mats[handleName].color.setHex(COLOR_ACTIVE);
@@ -307,15 +322,20 @@ export class PlaneHandles {
       this.drawingPlane.updatePlane();
       this._ringTotalAngle = totalAngle;
 
-      // Update rotation angle label
-      const degrees = Math.round(totalAngle * 180 / Math.PI);
-      if (degrees !== 0) {
-        this._updateLabel(this._rotationLabel, `${degrees}°`);
-        this._rotationLabel.visible = true;
-        const center = this.drawingPlane.group.position;
-        this._rotationLabel.position.copy(center).addScaledVector(this._ringAxis, RING_RADIUS + 0.5);
-      } else {
-        this._rotationLabel.visible = false;
+      // Update rotation angle label (cumulative from origin)
+      if (this._rotationOriginQuat) {
+        const currentQuat = this.drawingPlane.group.quaternion;
+        const deltaQuat = this._rotationOriginQuat.clone().conjugate().premultiply(currentQuat);
+        const cumulativeAngle = 2 * Math.acos(Math.min(1, Math.abs(deltaQuat.w)));
+        const cumulativeDegrees = Math.round(cumulativeAngle * 180 / Math.PI);
+        if (cumulativeDegrees !== 0) {
+          this._updateLabel(this._rotationLabel, `${cumulativeDegrees}°`);
+          this._rotationLabel.visible = true;
+          const center = this.drawingPlane.group.position;
+          this._rotationLabel.position.copy(center).addScaledVector(this._ringAxis, RING_RADIUS + 0.5);
+        } else {
+          this._rotationLabel.visible = false;
+        }
       }
     }
 
@@ -325,7 +345,7 @@ export class PlaneHandles {
   endDrag() {
     this._resetColors();
     this.activeHandle = null;
-    this._rotationLabel.visible = false;
+    // Rotation label stays visible between drags (persistent tracking)
   }
 
   _resetColors() {
