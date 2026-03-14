@@ -13,8 +13,8 @@ export class DrawingPlane {
     const gridSize = 20;
     const gridDivisions = 20;
     this.grid = new THREE.GridHelper(gridSize, gridDivisions, 0x4a4a6a, 0x3a3a5a);
-    this.grid.material.transparent = true;
-    this.grid.material.opacity = 0.4;
+    const materials = Array.isArray(this.grid.material) ? this.grid.material : [this.grid.material];
+    materials.forEach(m => { m.transparent = true; m.opacity = 0.4; });
     this.group.add(this.grid);
 
     // Axis indicator on the plane: small colored lines at center

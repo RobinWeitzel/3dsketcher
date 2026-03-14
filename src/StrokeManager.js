@@ -11,7 +11,6 @@ export class StrokeManager {
     this.undoStack = [];     // Actions: { type: 'add'|'remove', stroke }
     this.redoStack = [];
     this.currentStroke = null;
-    this.currentPoints = [];
     this.currentPointCount = 0;
   }
 
@@ -24,7 +23,6 @@ export class StrokeManager {
 
     const material = new THREE.LineBasicMaterial({ color: STROKE_COLOR });
     this.currentStroke = new THREE.Line(geometry, material);
-    this.currentPoints = [];
     this.currentPointCount = 0;
     this.scene.add(this.currentStroke);
 

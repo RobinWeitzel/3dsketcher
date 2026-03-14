@@ -11,6 +11,7 @@ export class InputHandler {
     this.modeController = modeController;
 
     this.isDrawing = false;
+    this.isErasing = false;
     this.activeTouches = new Map();
 
     this._onPointerDown = this._onPointerDown.bind(this);
@@ -53,6 +54,7 @@ export class InputHandler {
         const stroke = this.strokeManager.findNearestStroke(point);
         if (stroke) this.strokeManager.removeStroke(stroke);
       }
+      this.isErasing = true;
       e.preventDefault();
       return;
     }
@@ -78,15 +80,20 @@ export class InputHandler {
         // Single touch drag — translate the plane
         this._translatePlane(dx, dy);
       } else if (this.activeTouches.size === 2) {
-        // Two-finger twist — rotate the plane, and also translate
-        // Update this touch before computing angle
+        // Two-finger: rotate the plane AND translate
         this.activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        // Rotation via twist
         const currentAngle = this._computeTouchAngle();
         if (this._prevTouchAngle !== undefined) {
           const deltaAngle = currentAngle - this._prevTouchAngle;
           this._rotatePlane(deltaAngle);
         }
         this._prevTouchAngle = currentAngle;
+
+        // Translation via drag midpoint
+        this._translatePlane(dx, dy);
+
         e.preventDefault();
         return;
       }
@@ -96,8 +103,21 @@ export class InputHandler {
       return;
     }
 
-    if (!this.isDrawing) return;
     if (e.pointerType !== 'pen') return;
+
+    // Eraser drag: erase strokes as pen moves
+    if (this.isErasing) {
+      const ndc = this._getNDC(e);
+      const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
+      if (point) {
+        const stroke = this.strokeManager.findNearestStroke(point);
+        if (stroke) this.strokeManager.removeStroke(stroke);
+      }
+      e.preventDefault();
+      return;
+    }
+
+    if (!this.isDrawing) return;
 
     const ndc = this._getNDC(e);
     const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
@@ -118,8 +138,15 @@ export class InputHandler {
       return;
     }
 
-    if (!this.isDrawing) return;
     if (e.pointerType !== 'pen') return;
+
+    if (this.isErasing) {
+      this.isErasing = false;
+      e.preventDefault();
+      return;
+    }
+
+    if (!this.isDrawing) return;
 
     this.isDrawing = false;
     this.strokeManager.endStroke();
@@ -149,8 +176,9 @@ export class InputHandler {
    * Rotate the drawing plane around its normal axis by the given angle (radians).
    */
   _rotatePlane(deltaAngle) {
-    const normal = this.drawingPlane.getNormal();
-    this.drawingPlane.group.rotateOnAxis(normal, deltaAngle);
+    // rotateOnAxis expects axis in local space; the plane's local normal is always (0,1,0)
+    const localNormal = new THREE.Vector3(0, 1, 0);
+    this.drawingPlane.group.rotateOnAxis(localNormal, deltaAngle);
   }
 
   /**
