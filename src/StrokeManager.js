@@ -42,6 +42,9 @@ export class StrokeManager {
     this.currentStroke = null;
     this.currentPointCount = 0;
 
+    this.activeLayerId = null;
+    this.layers = []; // [{id, name, visible}]
+
     // Shared uniforms — all stroke materials reference these same objects
     this.sharedUniforms = {
       uColor: { value: STROKE_COLOR },
@@ -119,6 +122,7 @@ export class StrokeManager {
     this.strokes.push(this.currentStroke);
     this.currentStroke.userData.color = '#222222';
     this.currentStroke.userData.width = 1;
+    this.currentStroke.userData.layerId = this.activeLayerId;
     this.undoStack.push({ type: 'add', stroke: this.currentStroke });
     this.redoStack = [];
     this.currentStroke = null;
@@ -171,6 +175,7 @@ export class StrokeManager {
     let nearestDist = threshold;
 
     for (const stroke of this.strokes) {
+      if (!stroke.visible) continue;
       const positions = stroke.geometry.attributes.position;
       for (let i = 0; i < positions.count; i++) {
         const dx = positions.getX(i) - point.x;
@@ -187,6 +192,35 @@ export class StrokeManager {
     return nearest;
   }
 
+  setActiveLayer(layerId) {
+    this.activeLayerId = layerId;
+  }
+
+  setLayerVisibility(layerId, visible) {
+    for (const stroke of this.strokes) {
+      if (stroke.userData.layerId === layerId) {
+        stroke.visible = visible;
+      }
+    }
+  }
+
+  getStrokesByLayer(layerId) {
+    return this.strokes.filter(s => s.userData.layerId === layerId);
+  }
+
+  removeStrokesByLayer(layerId) {
+    const toRemove = this.strokes.filter(s => s.userData.layerId === layerId);
+    for (const stroke of toRemove) {
+      this.scene.remove(stroke);
+      stroke.geometry.dispose();
+      stroke.material.dispose();
+    }
+    this.strokes = this.strokes.filter(s => s.userData.layerId !== layerId);
+    // Clear undo/redo since layer state changed
+    this.undoStack = [];
+    this.redoStack = [];
+  }
+
   serializeStrokes() {
     return this.strokes.map(stroke => {
       const positions = stroke.geometry.attributes.position;
@@ -198,6 +232,7 @@ export class StrokeManager {
         points,
         color: stroke.userData.color || '#222222',
         width: stroke.userData.width || 1,
+        layerId: stroke.userData.layerId || null,
       };
     });
   }
@@ -231,6 +266,7 @@ export class StrokeManager {
       const stroke = new THREE.Line(geometry, material);
       stroke.userData.color = data.color || '#222222';
       stroke.userData.width = data.width || 1;
+      stroke.userData.layerId = data.layerId || null;
       this.scene.add(stroke);
       this.strokes.push(stroke);
     }

@@ -6,13 +6,17 @@ import { ModeController } from './ModeController.js';
 import { InputHandler } from './InputHandler.js';
 import { PlaneHandles } from './PlaneHandles.js';
 import { ProjectManager } from './ProjectManager.js';
+import { LayerPanel } from './LayerPanel.js';
 
 const sceneManager = new SceneManager();
 const drawingPlane = new DrawingPlane(sceneManager.scene);
 const strokeManager = new StrokeManager(sceneManager.scene, drawingPlane, sceneManager.camera);
 const modeController = new ModeController();
+const layerPanel = new LayerPanel(strokeManager);
 
-const projectManager = new ProjectManager(strokeManager, drawingPlane, sceneManager.camera, sceneManager.orbitControls);
+const projectManager = new ProjectManager(strokeManager, drawingPlane, sceneManager.camera, sceneManager.orbitControls, layerPanel);
+
+layerPanel.onChange(() => projectManager.autoSave());
 
 modeController.setUndoRedoHandlers(
   () => { modeController.exitAdjusting(); planeHandles.hide(); strokeManager.undo(); projectManager.autoSave(); },
