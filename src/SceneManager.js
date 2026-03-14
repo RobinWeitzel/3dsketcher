@@ -19,6 +19,7 @@ export class SceneManager {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(0x1a1a2e);
+    this.renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(this.renderer.domElement);
 
     this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);

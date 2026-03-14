@@ -53,6 +53,7 @@ export class InputHandler {
         const stroke = this.strokeManager.findNearestStroke(point);
         if (stroke) this.strokeManager.removeStroke(stroke);
       }
+      e.preventDefault();
       return;
     }
 
@@ -113,6 +114,7 @@ export class InputHandler {
       if (this.activeTouches.size < 2) {
         this._prevTouchAngle = undefined;
       }
+      e.preventDefault();
       return;
     }
 
@@ -121,6 +123,7 @@ export class InputHandler {
 
     this.isDrawing = false;
     this.strokeManager.endStroke();
+    e.preventDefault();
   }
 
   /**
