@@ -287,9 +287,10 @@ export class PlaneHandles {
       const currentPoint = this._projectRayOntoLine(ray, this._arrowOrigin, this._arrowNormal);
       const delta = currentPoint.clone().sub(this._arrowStartProj);
       const raw = -delta.dot(this._arrowNormal);
-      // Clamp total offset, not per-frame delta
+      // Clamp and snap to nearest unit
       const maxOffset = 3;
-      const newOffset = Math.max(-maxOffset, Math.min(maxOffset, raw));
+      const clamped = Math.max(-maxOffset, Math.min(maxOffset, raw));
+      const newOffset = Math.round(clamped * 10) / 10; // snap to 0.1 unit increments
 
       this.drawingPlane.group.position.copy(this._arrowOrigin).addScaledVector(this._arrowNormal, newOffset);
       this.drawingPlane.updatePlane();
