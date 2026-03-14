@@ -5,6 +5,8 @@ export class ModeController {
     this.eraserActive = false;
     this.adjustingPlane = false;
     this._adjustingCallbacks = [];
+    this.activeColor = '#222222';
+    this._colorCallbacks = [];
 
     this._createToolbar();
   }
@@ -29,6 +31,35 @@ export class ModeController {
       -webkit-user-select: none;
     `;
 
+    // Color palette
+    const colorBar = document.createElement('div');
+    colorBar.style.cssText = 'display: flex; gap: 4px; align-items: center; padding-right: 8px; border-right: 1px solid rgba(0,0,0,0.1);';
+
+    const presetColors = ['#222222', '#f44336', '#2196f3', '#4caf50', '#ff9800', '#9c27b0', '#ffffff', '#9e9e9e'];
+    this._colorSwatches = [];
+
+    for (const color of presetColors) {
+      const swatch = document.createElement('button');
+      swatch.style.cssText = `
+        width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
+        background: ${color}; cursor: pointer; touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        ${color === '#ffffff' ? 'box-shadow: inset 0 0 0 1px #ccc;' : ''}
+      `;
+      swatch.addEventListener('pointerdown', (e) => { e.preventDefault(); this._setColor(color); });
+      colorBar.appendChild(swatch);
+      this._colorSwatches.push({ el: swatch, color });
+    }
+
+    // Custom color picker
+    const customInput = document.createElement('input');
+    customInput.type = 'color';
+    customInput.value = '#222222';
+    customInput.style.cssText = 'width: 28px; height: 28px; border: none; padding: 0; cursor: pointer; border-radius: 50%; overflow: hidden;';
+    customInput.addEventListener('input', (e) => { this._setColor(e.target.value); });
+    colorBar.appendChild(customInput);
+    this._customColorInput = customInput;
+
     this.newBtn = this._createButton('New', null);
     this.saveBtn = this._createButton('Save', null);
     this.loadBtn = this._createButton('Load', null);
@@ -37,10 +68,11 @@ export class ModeController {
     this.eraserBtn = this._createButton('Eraser', () => this._toggleEraser());
     this.moveBtn = this._createButton('Move', () => this._toggleAdjusting());
 
-    toolbar.append(this.newBtn, this.saveBtn, this.loadBtn, this.undoBtn, this.redoBtn, this.eraserBtn, this.moveBtn);
+    toolbar.append(colorBar, this.newBtn, this.saveBtn, this.loadBtn, this.undoBtn, this.redoBtn, this.eraserBtn, this.moveBtn);
     document.body.appendChild(toolbar);
 
     this._updateButtonStates();
+    this._updateColorSwatches();
   }
 
   _createButton(label, onClick) {
@@ -104,6 +136,22 @@ export class ModeController {
       if (this.adjustingPlane) this.exitAdjusting();
     }
     this._updateButtonStates();
+  }
+
+  _setColor(color) {
+    this.activeColor = color;
+    this._updateColorSwatches();
+    for (const cb of this._colorCallbacks) cb(color);
+  }
+
+  _updateColorSwatches() {
+    for (const s of this._colorSwatches) {
+      s.el.style.borderColor = s.color === this.activeColor ? '#1565c0' : 'transparent';
+    }
+  }
+
+  onColorChange(fn) {
+    this._colorCallbacks.push(fn);
   }
 
   _updateButtonStates() {

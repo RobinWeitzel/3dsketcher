@@ -61,9 +61,15 @@ export class StrokeManager {
     this.sharedUniforms.uCameraPosition.value.copy(this.camera.position);
   }
 
-  _createMaterial() {
+  _createMaterial(color) {
+    const uniforms = {
+      uColor: { value: color ? new THREE.Color(color) : STROKE_COLOR.clone() },
+      uPlaneNormal: this.sharedUniforms.uPlaneNormal,
+      uPlanePoint: this.sharedUniforms.uPlanePoint,
+      uCameraPosition: this.sharedUniforms.uCameraPosition,
+    };
     return new THREE.ShaderMaterial({
-      uniforms: this.sharedUniforms,
+      uniforms,
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
       transparent: true,
@@ -71,14 +77,15 @@ export class StrokeManager {
     });
   }
 
-  beginStroke(point) {
+  beginStroke(point, color) {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(MAX_POINTS_PER_STROKE * 3);
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setDrawRange(0, 0);
 
-    const material = this._createMaterial();
+    const material = this._createMaterial(color);
     this.currentStroke = new THREE.Line(geometry, material);
+    this.currentStroke.userData.color = color || '#222222';
     this.currentPointCount = 0;
     this.scene.add(this.currentStroke);
 
@@ -120,7 +127,6 @@ export class StrokeManager {
     this.currentStroke.geometry.setDrawRange(0, this.currentPointCount);
 
     this.strokes.push(this.currentStroke);
-    this.currentStroke.userData.color = '#222222';
     this.currentStroke.userData.width = 1;
     this.currentStroke.userData.layerId = this.activeLayerId;
     this.undoStack.push({ type: 'add', stroke: this.currentStroke });
@@ -262,7 +268,7 @@ export class StrokeManager {
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setDrawRange(0, data.points.length);
 
-      const material = this._createMaterial();
+      const material = this._createMaterial(data.color);
       const stroke = new THREE.Line(geometry, material);
       stroke.userData.color = data.color || '#222222';
       stroke.userData.width = data.width || 1;
