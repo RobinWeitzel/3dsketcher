@@ -37,9 +37,14 @@ export class PlaneHandles {
 
     // Distance tracking
     this._distanceOrigin = null;
-    this._distanceLabel = this._createDistanceLabel();
+    this._distanceLabel = this._createLabel();
     this.scene.add(this._distanceLabel);
     this._distanceLabel.visible = false;
+
+    // Rotation angle label
+    this._rotationLabel = this._createLabel();
+    this.scene.add(this._rotationLabel);
+    this._rotationLabel.visible = false;
 
     this.hide();
   }
@@ -113,6 +118,7 @@ export class PlaneHandles {
     this._resetColors();
     this._distanceOrigin = null;
     if (this._distanceLabel) this._distanceLabel.visible = false;
+    if (this._rotationLabel) this._rotationLabel.visible = false;
   }
 
   // Sync handle transforms to match the drawing plane
@@ -278,14 +284,18 @@ export class PlaneHandles {
       if (this._distanceOrigin) {
         const currentPos = this.drawingPlane.group.position;
         const dist = currentPos.distanceTo(this._distanceOrigin);
-        this._updateDistanceLabel(dist);
+        this._updateLabel(this._distanceLabel, dist.toFixed(2));
         this._distanceLabel.visible = true;
         const normal = this._arrowNormal;
         this._distanceLabel.position.copy(currentPos).addScaledVector(normal, ARROW_LENGTH + 0.5);
       }
     } else {
       const currentAngle = this._getRingAngleFixed(ray);
-      const rawDelta = -(currentAngle - this._ringStartAngle);
+      // Normalize delta to [-π, π] to prevent atan2 discontinuity jumps
+      const rawDelta = Math.atan2(
+        Math.sin(-(currentAngle - this._ringStartAngle)),
+        Math.cos(-(currentAngle - this._ringStartAngle))
+      );
       // Clamp and snap to 5° increments
       const maxAngle = Math.PI; // 180° max
       const clamped = Math.max(-maxAngle, Math.min(maxAngle, rawDelta));
@@ -296,6 +306,17 @@ export class PlaneHandles {
       this.drawingPlane.group.quaternion.copy(this._ringStartQuat).premultiply(rotQ);
       this.drawingPlane.updatePlane();
       this._ringTotalAngle = totalAngle;
+
+      // Update rotation angle label
+      const degrees = Math.round(totalAngle * 180 / Math.PI);
+      if (degrees !== 0) {
+        this._updateLabel(this._rotationLabel, `${degrees}°`);
+        this._rotationLabel.visible = true;
+        const center = this.drawingPlane.group.position;
+        this._rotationLabel.position.copy(center).addScaledVector(this._ringAxis, RING_RADIUS + 0.5);
+      } else {
+        this._rotationLabel.visible = false;
+      }
     }
 
     this.update();
@@ -304,6 +325,7 @@ export class PlaneHandles {
   endDrag() {
     this._resetColors();
     this.activeHandle = null;
+    this._rotationLabel.visible = false;
   }
 
   _resetColors() {
@@ -335,24 +357,23 @@ export class PlaneHandles {
     return Math.atan2(diff.dot(this._ringBasisB), diff.dot(this._ringBasisA));
   }
 
-  _createDistanceLabel() {
+  _createLabel() {
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 64;
-    this._labelCanvas = canvas;
-    this._labelCtx = canvas.getContext('2d');
 
     const texture = new THREE.CanvasTexture(canvas);
-    this._labelTexture = texture;
-
     const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
     const sprite = new THREE.Sprite(material);
     sprite.scale.set(1.5, 0.75, 1);
+    sprite._canvas = canvas;
+    sprite._ctx = canvas.getContext('2d');
+    sprite._texture = texture;
     return sprite;
   }
 
-  _updateDistanceLabel(distance) {
-    const ctx = this._labelCtx;
+  _updateLabel(sprite, text) {
+    const ctx = sprite._ctx;
     ctx.clearRect(0, 0, 128, 64);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.beginPath();
@@ -362,8 +383,8 @@ export class PlaneHandles {
     ctx.font = 'bold 28px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(distance.toFixed(2), 64, 32);
-    this._labelTexture.needsUpdate = true;
+    ctx.fillText(text, 64, 32);
+    sprite._texture.needsUpdate = true;
   }
 
   dispose() {
@@ -374,8 +395,10 @@ export class PlaneHandles {
       m.material.dispose();
     }
     this._meshes = [];
-    this.scene.remove(this._distanceLabel);
-    this._distanceLabel.material.map.dispose();
-    this._distanceLabel.material.dispose();
+    for (const label of [this._distanceLabel, this._rotationLabel]) {
+      this.scene.remove(label);
+      label.material.map.dispose();
+      label.material.dispose();
+    }
   }
 }
