@@ -35,9 +35,10 @@ export class InputHandler {
     // Track touch points for plane manipulation in DRAW mode
     if (e.pointerType === 'touch' && this.modeController.mode === Mode.DRAW) {
       this.activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      // Store the angle between two touches for rotation tracking
+      // Store state for two-finger rotation tracking
       if (this.activeTouches.size === 2) {
         this._prevTouchAngle = this._computeTouchAngle();
+        this._prevMidpoint = this._computeTouchMidpoint();
       }
       e.preventDefault();
       return;
@@ -80,19 +81,30 @@ export class InputHandler {
         // Single touch drag — translate the plane
         this._translatePlane(dx, dy);
       } else if (this.activeTouches.size === 2) {
-        // Two-finger: rotate the plane AND translate
+        // Two-finger: full 3-axis rotation (no translation)
         this.activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-        // Rotation via twist
+        const ROTATION_SENSITIVITY = 0.005;
+
+        // Yaw: twist between fingers → rotate around local Y (normal)
         const currentAngle = this._computeTouchAngle();
         if (this._prevTouchAngle !== undefined) {
           const deltaAngle = currentAngle - this._prevTouchAngle;
-          this._rotatePlane(deltaAngle);
+          this.drawingPlane.group.rotateOnAxis(new THREE.Vector3(0, 1, 0), deltaAngle);
         }
         this._prevTouchAngle = currentAngle;
 
-        // Translation via drag midpoint
-        this._translatePlane(dx, dy);
+        // Pitch & Roll: midpoint drag → rotate around local X and Z
+        const currentMidpoint = this._computeTouchMidpoint();
+        if (this._prevMidpoint) {
+          const mdx = currentMidpoint.x - this._prevMidpoint.x;
+          const mdy = currentMidpoint.y - this._prevMidpoint.y;
+          // Pitch: vertical drag → tilt forward/backward around local X
+          this.drawingPlane.group.rotateOnAxis(new THREE.Vector3(1, 0, 0), mdy * ROTATION_SENSITIVITY);
+          // Roll: horizontal drag → tilt sideways around local Z
+          this.drawingPlane.group.rotateOnAxis(new THREE.Vector3(0, 0, 1), -mdx * ROTATION_SENSITIVITY);
+        }
+        this._prevMidpoint = currentMidpoint;
 
         e.preventDefault();
         return;
@@ -133,6 +145,7 @@ export class InputHandler {
       this.activeTouches.delete(e.pointerId);
       if (this.activeTouches.size < 2) {
         this._prevTouchAngle = undefined;
+        this._prevMidpoint = undefined;
       }
       e.preventDefault();
       return;
@@ -173,19 +186,21 @@ export class InputHandler {
   }
 
   /**
-   * Rotate the drawing plane around its normal axis by the given angle (radians).
-   */
-  _rotatePlane(deltaAngle) {
-    // rotateOnAxis expects axis in local space; the plane's local normal is always (0,1,0)
-    const localNormal = new THREE.Vector3(0, 1, 0);
-    this.drawingPlane.group.rotateOnAxis(localNormal, deltaAngle);
-  }
-
-  /**
    * Compute the angle (radians) of the line between two active touch points.
    */
   _computeTouchAngle() {
     const pts = Array.from(this.activeTouches.values());
     return Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+  }
+
+  /**
+   * Compute the midpoint of two active touch points in screen pixels.
+   */
+  _computeTouchMidpoint() {
+    const pts = Array.from(this.activeTouches.values());
+    return {
+      x: (pts[0].x + pts[1].x) / 2,
+      y: (pts[0].y + pts[1].y) / 2,
+    };
   }
 }
