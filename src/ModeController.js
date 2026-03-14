@@ -1,27 +1,12 @@
 // src/ModeController.js
 
-export const Mode = {
-  DRAW: 'draw',
-  CAMERA: 'camera',
-};
-
 export class ModeController {
   constructor() {
-    this.mode = Mode.DRAW;
     this.eraserActive = false;
-    this._listeners = [];
+    this.mode = 'camera'; // 'camera' | 'plane'
+    this._modeChangeCallbacks = [];
 
     this._createToolbar();
-  }
-
-  onModeChange(fn) {
-    this._listeners.push(fn);
-  }
-
-  _notify() {
-    for (const fn of this._listeners) {
-      fn(this.mode, this.eraserActive);
-    }
   }
 
   _createToolbar() {
@@ -35,7 +20,8 @@ export class ModeController {
       display: flex;
       gap: 8px;
       padding: 8px;
-      background: rgba(30, 30, 50, 0.85);
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       border-radius: 12px;
       backdrop-filter: blur(8px);
       z-index: 100;
@@ -43,7 +29,7 @@ export class ModeController {
       -webkit-user-select: none;
     `;
 
-    this.modeBtn = this._createButton('Draw', () => this._toggleMode());
+    this.modeBtn = this._createButton('Camera', () => this._toggleMode());
     this.undoBtn = this._createButton('Undo', null);
     this.redoBtn = this._createButton('Redo', null);
     this.eraserBtn = this._createButton('Eraser', () => this._toggleEraser());
@@ -63,8 +49,8 @@ export class ModeController {
       padding: 8px 12px;
       border: none;
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      color: #ccc;
+      background: rgba(0, 0, 0, 0.06);
+      color: #333;
       font-size: 14px;
       cursor: pointer;
       touch-action: manipulation;
@@ -74,33 +60,36 @@ export class ModeController {
     return btn;
   }
 
-  // Public: attach undo/redo handlers after StrokeManager is created
   setUndoRedoHandlers(onUndo, onRedo) {
     this.undoBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); onUndo(); });
     this.redoBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); onRedo(); });
   }
 
+  onModeChange(callback) {
+    this._modeChangeCallbacks.push(callback);
+  }
+
   _toggleMode() {
-    this.mode = this.mode === Mode.DRAW ? Mode.CAMERA : Mode.DRAW;
-    if (this.mode === Mode.CAMERA) this.eraserActive = false;
+    this.mode = this.mode === 'camera' ? 'plane' : 'camera';
     this._updateButtonStates();
-    this._notify();
+    for (const cb of this._modeChangeCallbacks) cb(this.mode);
   }
 
   _toggleEraser() {
-    if (this.mode === Mode.CAMERA) return;
     this.eraserActive = !this.eraserActive;
     this._updateButtonStates();
-    this._notify();
   }
 
   _updateButtonStates() {
-    this.modeBtn.textContent = this.mode === Mode.DRAW ? 'Draw' : 'Camera';
-    this.modeBtn.style.background = this.mode === Mode.DRAW
-      ? 'rgba(100, 200, 100, 0.3)' : 'rgba(100, 150, 255, 0.3)';
+    // Mode button
+    this.modeBtn.textContent = this.mode === 'camera' ? 'Camera' : 'Plane';
+    this.modeBtn.style.background = this.mode === 'plane'
+      ? 'rgba(33, 150, 243, 0.2)' : 'rgba(0, 0, 0, 0.06)';
+    this.modeBtn.style.color = this.mode === 'plane' ? '#1565c0' : '#333';
 
+    // Eraser button
     this.eraserBtn.style.background = this.eraserActive
-      ? 'rgba(255, 100, 100, 0.3)' : 'rgba(255, 255, 255, 0.1)';
-    this.eraserBtn.style.color = this.eraserActive ? '#ff6666' : '#ccc';
+      ? 'rgba(244, 67, 54, 0.2)' : 'rgba(0, 0, 0, 0.06)';
+    this.eraserBtn.style.color = this.eraserActive ? '#d32f2f' : '#333';
   }
 }
