@@ -4,12 +4,13 @@ const STORAGE_KEY = 'sketch3d_project';
 const PROJECT_VERSION = 1;
 
 export class ProjectManager {
-  constructor(strokeManager, drawingPlane, camera, orbitControls, layerPanel) {
+  constructor(strokeManager, drawingPlane, camera, orbitControls, layerPanel, measurementTool) {
     this.strokeManager = strokeManager;
     this.drawingPlane = drawingPlane;
     this.camera = camera;
     this.orbitControls = orbitControls;
     this.layerPanel = layerPanel;
+    this.measurementTool = measurementTool;
 
     this._autoSaveTimer = null;
   }
@@ -32,6 +33,7 @@ export class ProjectManager {
       },
       strokes: this.strokeManager.serializeStrokes(),
       layers: this.layerPanel ? this.layerPanel.serialize() : null,
+      measurements: this.measurementTool ? this.measurementTool.serialize() : null,
     };
   }
 
@@ -64,6 +66,10 @@ export class ProjectManager {
 
     if (data.layers && this.layerPanel) {
       this.layerPanel.deserialize(data.layers);
+    }
+
+    if (data.measurements && this.measurementTool) {
+      this.measurementTool.deserialize(data.measurements);
     }
 
     return true;
@@ -135,6 +141,9 @@ export class ProjectManager {
   // New project — clear everything
   newProject() {
     this.strokeManager.loadStrokes([]);
+    if (this.measurementTool) {
+      this.measurementTool.clearAll();
+    }
     if (this.layerPanel) {
       this.layerPanel.layers = [];
       this.layerPanel.addLayer('Layer 1');

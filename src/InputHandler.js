@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 
 export class InputHandler {
-  constructor(canvas, camera, drawingPlane, strokeManager, modeController, orbitControls, planeHandles) {
+  constructor(canvas, camera, drawingPlane, strokeManager, modeController, orbitControls, planeHandles, measurementTool) {
     this.canvas = canvas;
     this.camera = camera;
     this.drawingPlane = drawingPlane;
@@ -10,6 +10,7 @@ export class InputHandler {
     this.modeController = modeController;
     this.orbitControls = orbitControls;
     this.planeHandles = planeHandles;
+    this.measurementTool = measurementTool;
 
     this.isDrawing = false;
     this.isErasing = false;
@@ -57,6 +58,16 @@ export class InputHandler {
       const hit = this.planeHandles.hitTest(this._raycaster.ray);
       if (hit) {
         this.planeHandles.beginDrag(hit, this._raycaster.ray);
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // Ruler
+    if (this.modeController.rulerActive) {
+      const point = this.drawingPlane.raycast(ndc.x, ndc.y, this.camera);
+      if (point) {
+        this.measurementTool.addPoint(point);
       }
       e.preventDefault();
       return;

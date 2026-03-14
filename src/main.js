@@ -7,6 +7,9 @@ import { InputHandler } from './InputHandler.js';
 import { PlaneHandles } from './PlaneHandles.js';
 import { ProjectManager } from './ProjectManager.js';
 import { LayerPanel } from './LayerPanel.js';
+import { ExportManager } from './ExportManager.js';
+import { MeasurementTool } from './MeasurementTool.js';
+import { ViewportGizmo } from './ViewportGizmo.js';
 
 const sceneManager = new SceneManager();
 const drawingPlane = new DrawingPlane(sceneManager.scene);
@@ -15,6 +18,10 @@ const modeController = new ModeController();
 const layerPanel = new LayerPanel(strokeManager);
 
 const projectManager = new ProjectManager(strokeManager, drawingPlane, sceneManager.camera, sceneManager.orbitControls, layerPanel);
+
+const exportManager = new ExportManager(strokeManager);
+modeController.onExport('stl', () => exportManager.exportSTL());
+modeController.onExport('obj', () => exportManager.exportOBJ());
 
 layerPanel.onChange(() => projectManager.autoSave());
 
@@ -27,6 +34,14 @@ modeController.setUndoRedoHandlers(
 sceneManager.addUpdateCallback(() => strokeManager.updateUniforms());
 
 const planeHandles = new PlaneHandles(sceneManager.scene, drawingPlane, sceneManager.camera);
+const measurementTool = new MeasurementTool(sceneManager.scene);
+projectManager.measurementTool = measurementTool;
+
+modeController.onPreset((name) => {
+  drawingPlane.setPreset(name);
+  planeHandles.update();
+  projectManager.autoSave();
+});
 
 // Show/hide handles when adjusting state changes
 modeController.onAdjustingChange((adjusting) => {
@@ -44,8 +59,14 @@ const inputHandler = new InputHandler(
   strokeManager,
   modeController,
   sceneManager.orbitControls,
-  planeHandles
+  planeHandles,
+  measurementTool
 );
+
+const viewportGizmo = new ViewportGizmo(sceneManager.camera, sceneManager.orbitControls);
+sceneManager.addUpdateCallback(() => viewportGizmo.update());
+
+modeController.onClearMeasurements(() => measurementTool.clearAll());
 
 // Auto-save after each stroke
 const origEndStroke = strokeManager.endStroke.bind(strokeManager);

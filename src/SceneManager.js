@@ -25,8 +25,11 @@ export class SceneManager {
     this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbitControls.enableDamping = true;
     this.orbitControls.dampingFactor = 0.1;
-    this.orbitControls.enableZoom = false;
     this.orbitControls.enabled = true;
+    this.orbitControls.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN,
+    };
 
     this._updateCallbacks = [];
 

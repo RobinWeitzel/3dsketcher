@@ -3,12 +3,14 @@
 export class ModeController {
   constructor() {
     this.eraserActive = false;
+    this.rulerActive = false;
     this.adjustingPlane = false;
     this._adjustingCallbacks = [];
     this.activeColor = '#222222';
     this._colorCallbacks = [];
     this.activeWidth = 1; // 1=thin, 2=medium, 3=thick
     this._widthCallbacks = [];
+    this._exportCallbacks = { stl: null, obj: null };
 
     this._createToolbar();
   }
@@ -87,15 +89,39 @@ export class ModeController {
       this._widthButtons.push({ el: btn, value: w.value });
     }
 
+    // Plane presets (visible only in adjust mode)
+    this._presetBar = document.createElement('div');
+    this._presetBar.style.cssText = 'display: none; gap: 4px; align-items: center;';
+
+    this._presetCallbacks = [];
+    for (const name of ['XZ', 'XY', 'YZ']) {
+      const btn = document.createElement('button');
+      btn.textContent = name;
+      btn.style.cssText = `
+        min-width: 36px; min-height: 36px; border: none; border-radius: 6px;
+        background: rgba(33, 150, 243, 0.1); color: #1565c0; font-size: 13px; font-weight: bold;
+        cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      `;
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        for (const cb of this._presetCallbacks) cb(name);
+      });
+      this._presetBar.appendChild(btn);
+    }
+
     this.newBtn = this._createButton('New', null);
     this.saveBtn = this._createButton('Save', null);
     this.loadBtn = this._createButton('Load', null);
     this.undoBtn = this._createButton('Undo', null);
     this.redoBtn = this._createButton('Redo', null);
     this.eraserBtn = this._createButton('Eraser', () => this._toggleEraser());
+    this.rulerBtn = this._createButton('Ruler', () => this._toggleRuler());
+    this.clearMeasBtn = this._createButton('Clear', null);
+    this.clearMeasBtn.style.display = 'none';
     this.moveBtn = this._createButton('Move', () => this._toggleAdjusting());
+    this.exportBtn = this._createButton('Export', () => this._showExportModal());
 
-    toolbar.append(colorBar, widthBar, this.newBtn, this.saveBtn, this.loadBtn, this.undoBtn, this.redoBtn, this.eraserBtn, this.moveBtn);
+    toolbar.append(colorBar, widthBar, this.newBtn, this.saveBtn, this.loadBtn, this.undoBtn, this.redoBtn, this.eraserBtn, this.rulerBtn, this.clearMeasBtn, this.moveBtn, this._presetBar, this.exportBtn);
     document.body.appendChild(toolbar);
 
     this._updateButtonStates();
@@ -142,6 +168,7 @@ export class ModeController {
       return;
     }
     this.eraserActive = false;
+    this.rulerActive = false;
     this.enterAdjusting();
   }
 
@@ -158,9 +185,23 @@ export class ModeController {
     for (const cb of this._adjustingCallbacks) cb(false);
   }
 
+  _toggleRuler() {
+    this.rulerActive = !this.rulerActive;
+    if (this.rulerActive) {
+      this.eraserActive = false;
+      if (this.adjustingPlane) this.exitAdjusting();
+    }
+    this._updateButtonStates();
+  }
+
+  onClearMeasurements(fn) {
+    this.clearMeasBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); });
+  }
+
   _toggleEraser() {
     this.eraserActive = !this.eraserActive;
     if (this.eraserActive) {
+      this.rulerActive = false;
       if (this.adjustingPlane) this.exitAdjusting();
     }
     this._updateButtonStates();
@@ -199,15 +240,70 @@ export class ModeController {
     this._widthCallbacks.push(fn);
   }
 
+  onPreset(fn) {
+    this._presetCallbacks.push(fn);
+  }
+
   _updateButtonStates() {
     // Eraser button
     this.eraserBtn.style.background = this.eraserActive
       ? 'rgba(244, 67, 54, 0.2)' : 'rgba(0, 0, 0, 0.06)';
     this.eraserBtn.style.color = this.eraserActive ? '#d32f2f' : '#333';
 
+    // Ruler button
+    this.rulerBtn.style.background = this.rulerActive
+      ? 'rgba(255, 152, 0, 0.2)' : 'rgba(0, 0, 0, 0.06)';
+    this.rulerBtn.style.color = this.rulerActive ? '#e65100' : '#333';
+    this.clearMeasBtn.style.display = this.rulerActive ? '' : 'none';
+
     // Move button
     this.moveBtn.style.background = this.adjustingPlane
       ? 'rgba(33, 150, 243, 0.2)' : 'rgba(0, 0, 0, 0.06)';
     this.moveBtn.style.color = this.adjustingPlane ? '#1565c0' : '#333';
+
+    // Preset bar visibility
+    this._presetBar.style.display = this.adjustingPlane ? 'flex' : 'none';
+  }
+
+  _showExportModal() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+    `;
+
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: white; border-radius: 12px; padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2); min-width: 200px; text-align: center;
+    `;
+
+    const title = document.createElement('div');
+    title.textContent = 'Export Format';
+    title.style.cssText = 'font-size: 16px; font-weight: bold; margin-bottom: 12px;';
+
+    const stlBtn = document.createElement('button');
+    stlBtn.textContent = 'STL (3D Printing)';
+    stlBtn.style.cssText = 'display: block; width: 100%; padding: 10px; margin: 4px 0; border: none; border-radius: 8px; background: #2196f3; color: white; font-size: 14px; cursor: pointer;';
+    stlBtn.addEventListener('click', () => { overlay.remove(); if (this._exportCallbacks.stl) this._exportCallbacks.stl(); });
+
+    const objBtn = document.createElement('button');
+    objBtn.textContent = 'OBJ (Universal)';
+    objBtn.style.cssText = 'display: block; width: 100%; padding: 10px; margin: 4px 0; border: none; border-radius: 8px; background: #4caf50; color: white; font-size: 14px; cursor: pointer;';
+    objBtn.addEventListener('click', () => { overlay.remove(); if (this._exportCallbacks.obj) this._exportCallbacks.obj(); });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'display: block; width: 100%; padding: 10px; margin: 8px 0 0 0; border: none; border-radius: 8px; background: rgba(0,0,0,0.06); font-size: 14px; cursor: pointer;';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+
+    modal.append(title, stlBtn, objBtn, cancelBtn);
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  onExport(format, fn) {
+    this._exportCallbacks[format] = fn;
   }
 }

@@ -12,7 +12,7 @@ export class DrawingPlane {
     // Semi-transparent grid
     const gridSize = 20;
     const gridDivisions = 20;
-    this.grid = new THREE.GridHelper(gridSize, gridDivisions, 0x4a4a6a, 0x3a3a5a);
+    this.grid = new THREE.GridHelper(gridSize, gridDivisions, 0xbbbbbb, 0xd0d0d0);
     const materials = Array.isArray(this.grid.material) ? this.grid.material : [this.grid.material];
     materials.forEach(m => { m.transparent = true; m.opacity = 0.4; });
     this.group.add(this.grid);
@@ -42,6 +42,25 @@ export class DrawingPlane {
     normal.applyQuaternion(this.group.quaternion);
     const point = this.group.position.clone();
     this.plane.setFromNormalAndCoplanarPoint(normal, point);
+  }
+
+  // Reposition the plane to pass through `point` with the given `normal`
+  setFromNormalAndPoint(normal, point) {
+    const q = new THREE.Quaternion();
+    q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+    this.group.quaternion.copy(q);
+    this.group.position.copy(point);
+    this.updatePlane();
+  }
+
+  setPreset(name) {
+    const presets = {
+      XZ: { normal: new THREE.Vector3(0, 1, 0), point: new THREE.Vector3(0, 0, 0) },
+      XY: { normal: new THREE.Vector3(0, 0, 1), point: new THREE.Vector3(0, 0, 0) },
+      YZ: { normal: new THREE.Vector3(1, 0, 0), point: new THREE.Vector3(0, 0, 0) },
+    };
+    const p = presets[name];
+    if (p) this.setFromNormalAndPoint(p.normal, p.point);
   }
 
   // Raycast from screen coordinates to the drawing plane
