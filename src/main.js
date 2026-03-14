@@ -22,3 +22,7 @@ const inputHandler = new InputHandler(
   strokeManager,
   modeController
 );
+
+modeController.onModeChange((mode) => {
+  sceneManager.orbitControls.enabled = (mode === 'camera');
+});

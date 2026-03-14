@@ -1,5 +1,6 @@
 // src/SceneManager.js
 import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export class SceneManager {
   constructor() {
@@ -20,6 +21,12 @@ export class SceneManager {
     this.renderer.setClearColor(0x1a1a2e);
     document.body.appendChild(this.renderer.domElement);
 
+    this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.orbitControls.enableDamping = true;
+    this.orbitControls.dampingFactor = 0.1;
+    this.orbitControls.enableZoom = false; // Out of scope for MVP
+    this.orbitControls.enabled = false; // Start disabled (draw mode)
+
     this._onResize = this._onResize.bind(this);
     window.addEventListener('resize', this._onResize);
 
@@ -31,6 +38,7 @@ export class SceneManager {
   }
 
   _animate() {
+    this.orbitControls.update();
     this.renderer.render(this.scene, this.camera);
   }
 
