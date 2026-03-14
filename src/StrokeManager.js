@@ -24,7 +24,8 @@ const FRAGMENT_SHADER = `
   void main() {
     float cameraSide = dot(uCameraPosition - uPlanePoint, uPlaneNormal);
     float fragSide = dot(vWorldPos - uPlanePoint, uPlaneNormal);
-    float alpha = (cameraSide * fragSide > 0.0) ? 1.0 : 0.2;
+    // Fragments near the plane (within threshold) are treated as "in front"
+    float alpha = (fragSide * cameraSide > 0.0 || abs(fragSide) < 0.01) ? 1.0 : 0.2;
     gl_FragColor = vec4(uColor, alpha);
   }
 `;
@@ -116,6 +117,8 @@ export class StrokeManager {
     this.currentStroke.geometry.setDrawRange(0, this.currentPointCount);
 
     this.strokes.push(this.currentStroke);
+    this.currentStroke.userData.color = '#222222';
+    this.currentStroke.userData.width = 1;
     this.undoStack.push({ type: 'add', stroke: this.currentStroke });
     this.redoStack = [];
     this.currentStroke = null;
@@ -182,5 +185,54 @@ export class StrokeManager {
     }
 
     return nearest;
+  }
+
+  serializeStrokes() {
+    return this.strokes.map(stroke => {
+      const positions = stroke.geometry.attributes.position;
+      const points = [];
+      for (let i = 0; i < positions.count; i++) {
+        points.push({ x: positions.getX(i), y: positions.getY(i), z: positions.getZ(i) });
+      }
+      return {
+        points,
+        color: stroke.userData.color || '#222222',
+        width: stroke.userData.width || 1,
+      };
+    });
+  }
+
+  loadStrokes(strokeDataArray) {
+    // Clear existing strokes
+    for (const stroke of this.strokes) {
+      this.scene.remove(stroke);
+      stroke.geometry.dispose();
+      stroke.material.dispose();
+    }
+    this.strokes = [];
+    this.undoStack = [];
+    this.redoStack = [];
+    this.currentStroke = null;
+
+    // Rebuild strokes from data
+    for (const data of strokeDataArray) {
+      if (data.points.length < 2) continue;
+      const positions = new Float32Array(data.points.length * 3);
+      for (let i = 0; i < data.points.length; i++) {
+        positions[i * 3] = data.points[i].x;
+        positions[i * 3 + 1] = data.points[i].y;
+        positions[i * 3 + 2] = data.points[i].z;
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setDrawRange(0, data.points.length);
+
+      const material = this._createMaterial();
+      const stroke = new THREE.Line(geometry, material);
+      stroke.userData.color = data.color || '#222222';
+      stroke.userData.width = data.width || 1;
+      this.scene.add(stroke);
+      this.strokes.push(stroke);
+    }
   }
 }

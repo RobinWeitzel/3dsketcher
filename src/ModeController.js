@@ -29,12 +29,15 @@ export class ModeController {
       -webkit-user-select: none;
     `;
 
+    this.newBtn = this._createButton('New', null);
+    this.saveBtn = this._createButton('Save', null);
+    this.loadBtn = this._createButton('Load', null);
     this.undoBtn = this._createButton('Undo', null);
     this.redoBtn = this._createButton('Redo', null);
     this.eraserBtn = this._createButton('Eraser', () => this._toggleEraser());
     this.moveBtn = this._createButton('Move', () => this._toggleAdjusting());
 
-    toolbar.append(this.undoBtn, this.redoBtn, this.eraserBtn, this.moveBtn);
+    toolbar.append(this.newBtn, this.saveBtn, this.loadBtn, this.undoBtn, this.redoBtn, this.eraserBtn, this.moveBtn);
     document.body.appendChild(toolbar);
 
     this._updateButtonStates();
@@ -64,6 +67,10 @@ export class ModeController {
     this.undoBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); onUndo(); });
     this.redoBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); onRedo(); });
   }
+
+  onSave(fn) { this.saveBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); }
+  onLoad(fn) { this.loadBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); }
+  onNew(fn) { this.newBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); }
 
   onAdjustingChange(callback) {
     this._adjustingCallbacks.push(callback);
