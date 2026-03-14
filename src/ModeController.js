@@ -3,8 +3,8 @@
 export class ModeController {
   constructor() {
     this.eraserActive = false;
-    this.mode = 'camera'; // 'camera' | 'plane'
-    this._modeChangeCallbacks = [];
+    this.adjustingPlane = false;
+    this._adjustingCallbacks = [];
 
     this._createToolbar();
   }
@@ -29,12 +29,12 @@ export class ModeController {
       -webkit-user-select: none;
     `;
 
-    this.modeBtn = this._createButton('Camera', () => this._toggleMode());
     this.undoBtn = this._createButton('Undo', null);
     this.redoBtn = this._createButton('Redo', null);
     this.eraserBtn = this._createButton('Eraser', () => this._toggleEraser());
+    this.moveBtn = this._createButton('Move', () => this._toggleAdjusting());
 
-    toolbar.append(this.modeBtn, this.undoBtn, this.redoBtn, this.eraserBtn);
+    toolbar.append(this.undoBtn, this.redoBtn, this.eraserBtn, this.moveBtn);
     document.body.appendChild(toolbar);
 
     this._updateButtonStates();
@@ -65,31 +65,49 @@ export class ModeController {
     this.redoBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); onRedo(); });
   }
 
-  onModeChange(callback) {
-    this._modeChangeCallbacks.push(callback);
+  onAdjustingChange(callback) {
+    this._adjustingCallbacks.push(callback);
   }
 
-  _toggleMode() {
-    this.mode = this.mode === 'camera' ? 'plane' : 'camera';
+  _toggleAdjusting() {
+    if (this.adjustingPlane) {
+      this.exitAdjusting();
+      return;
+    }
+    this.eraserActive = false;
+    this.enterAdjusting();
+  }
+
+  enterAdjusting() {
+    this.adjustingPlane = true;
     this._updateButtonStates();
-    for (const cb of this._modeChangeCallbacks) cb(this.mode);
+    for (const cb of this._adjustingCallbacks) cb(true);
+  }
+
+  exitAdjusting() {
+    if (!this.adjustingPlane) return;
+    this.adjustingPlane = false;
+    this._updateButtonStates();
+    for (const cb of this._adjustingCallbacks) cb(false);
   }
 
   _toggleEraser() {
     this.eraserActive = !this.eraserActive;
+    if (this.eraserActive) {
+      if (this.adjustingPlane) this.exitAdjusting();
+    }
     this._updateButtonStates();
   }
 
   _updateButtonStates() {
-    // Mode button
-    this.modeBtn.textContent = this.mode === 'camera' ? 'Camera' : 'Plane';
-    this.modeBtn.style.background = this.mode === 'plane'
-      ? 'rgba(33, 150, 243, 0.2)' : 'rgba(0, 0, 0, 0.06)';
-    this.modeBtn.style.color = this.mode === 'plane' ? '#1565c0' : '#333';
-
     // Eraser button
     this.eraserBtn.style.background = this.eraserActive
       ? 'rgba(244, 67, 54, 0.2)' : 'rgba(0, 0, 0, 0.06)';
     this.eraserBtn.style.color = this.eraserActive ? '#d32f2f' : '#333';
+
+    // Move button
+    this.moveBtn.style.background = this.adjustingPlane
+      ? 'rgba(33, 150, 243, 0.2)' : 'rgba(0, 0, 0, 0.06)';
+    this.moveBtn.style.color = this.adjustingPlane ? '#1565c0' : '#333';
   }
 }
