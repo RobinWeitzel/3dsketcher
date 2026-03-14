@@ -79,7 +79,7 @@ export class InputHandler {
     if (!point) return;
 
     this.isDrawing = true;
-    this.strokeManager.beginStroke(point, this.modeController.activeColor);
+    this.strokeManager.beginStroke(point, this.modeController.activeColor, this.modeController.activeWidth);
     e.preventDefault();
   }
 

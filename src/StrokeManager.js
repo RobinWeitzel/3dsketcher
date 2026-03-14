@@ -77,7 +77,23 @@ export class StrokeManager {
     });
   }
 
-  beginStroke(point, color) {
+  _createTubeMaterial(color) {
+    const uniforms = {
+      uColor: { value: new THREE.Color(color || '#222222') },
+      uPlaneNormal: this.sharedUniforms.uPlaneNormal,
+      uPlanePoint: this.sharedUniforms.uPlanePoint,
+      uCameraPosition: this.sharedUniforms.uCameraPosition,
+    };
+    return new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+    });
+  }
+
+  beginStroke(point, color, width) {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(MAX_POINTS_PER_STROKE * 3);
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -86,6 +102,7 @@ export class StrokeManager {
     const material = this._createMaterial(color);
     this.currentStroke = new THREE.Line(geometry, material);
     this.currentStroke.userData.color = color || '#222222';
+    this.currentStroke.userData.width = width || 1;
     this.currentPointCount = 0;
     this.scene.add(this.currentStroke);
 
@@ -126,8 +143,36 @@ export class StrokeManager {
     );
     this.currentStroke.geometry.setDrawRange(0, this.currentPointCount);
 
+    const width = this.currentStroke.userData.width || 1;
+    if (width > 1) {
+      const pts = [];
+      for (let i = 0; i < this.currentPointCount; i++) {
+        pts.push(new THREE.Vector3(trimmed[i*3], trimmed[i*3+1], trimmed[i*3+2]));
+      }
+      if (pts.length >= 2) {
+        const curve = new THREE.CatmullRomCurve3(pts, false);
+        const radius = width === 2 ? 0.02 : 0.05;
+        const tubeGeo = new THREE.TubeGeometry(curve, Math.max(pts.length * 2, 8), radius, 6, false);
+        const tubeMat = this._createTubeMaterial(this.currentStroke.userData.color);
+
+        this.scene.remove(this.currentStroke);
+        this.currentStroke.geometry.dispose();
+        this.currentStroke.material.dispose();
+
+        const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+        tubeMesh.userData = {
+          color: this.currentStroke.userData.color,
+          width,
+          layerId: this.activeLayerId,
+          _points: trimmed,
+          _pointCount: this.currentPointCount,
+        };
+        this.scene.add(tubeMesh);
+        this.currentStroke = tubeMesh;
+      }
+    }
+
     this.strokes.push(this.currentStroke);
-    this.currentStroke.userData.width = 1;
     this.currentStroke.userData.layerId = this.activeLayerId;
     this.undoStack.push({ type: 'add', stroke: this.currentStroke });
     this.redoStack = [];
@@ -229,10 +274,18 @@ export class StrokeManager {
 
   serializeStrokes() {
     return this.strokes.map(stroke => {
-      const positions = stroke.geometry.attributes.position;
-      const points = [];
-      for (let i = 0; i < positions.count; i++) {
-        points.push({ x: positions.getX(i), y: positions.getY(i), z: positions.getZ(i) });
+      let points = [];
+      if (stroke.userData._points) {
+        const arr = stroke.userData._points;
+        const count = stroke.userData._pointCount;
+        for (let i = 0; i < count; i++) {
+          points.push({ x: arr[i*3], y: arr[i*3+1], z: arr[i*3+2] });
+        }
+      } else {
+        const positions = stroke.geometry.attributes.position;
+        for (let i = 0; i < positions.count; i++) {
+          points.push({ x: positions.getX(i), y: positions.getY(i), z: positions.getZ(i) });
+        }
       }
       return {
         points,
@@ -244,7 +297,6 @@ export class StrokeManager {
   }
 
   loadStrokes(strokeDataArray) {
-    // Clear existing strokes
     for (const stroke of this.strokes) {
       this.scene.remove(stroke);
       stroke.geometry.dispose();
@@ -255,26 +307,42 @@ export class StrokeManager {
     this.redoStack = [];
     this.currentStroke = null;
 
-    // Rebuild strokes from data
     for (const data of strokeDataArray) {
       if (data.points.length < 2) continue;
-      const positions = new Float32Array(data.points.length * 3);
-      for (let i = 0; i < data.points.length; i++) {
-        positions[i * 3] = data.points[i].x;
-        positions[i * 3 + 1] = data.points[i].y;
-        positions[i * 3 + 2] = data.points[i].z;
-      }
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      geometry.setDrawRange(0, data.points.length);
+      const width = data.width || 1;
 
-      const material = this._createMaterial(data.color);
-      const stroke = new THREE.Line(geometry, material);
-      stroke.userData.color = data.color || '#222222';
-      stroke.userData.width = data.width || 1;
-      stroke.userData.layerId = data.layerId || null;
-      this.scene.add(stroke);
-      this.strokes.push(stroke);
+      if (width > 1) {
+        const pts = data.points.map(p => new THREE.Vector3(p.x, p.y, p.z));
+        const curve = new THREE.CatmullRomCurve3(pts, false);
+        const radius = width === 2 ? 0.02 : 0.05;
+        const tubeGeo = new THREE.TubeGeometry(curve, Math.max(pts.length * 2, 8), radius, 6, false);
+        const tubeMat = this._createTubeMaterial(data.color);
+        const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+        const posArr = new Float32Array(data.points.length * 3);
+        for (let i = 0; i < data.points.length; i++) {
+          posArr[i*3] = data.points[i].x;
+          posArr[i*3+1] = data.points[i].y;
+          posArr[i*3+2] = data.points[i].z;
+        }
+        mesh.userData = { color: data.color, width, layerId: data.layerId, _points: posArr, _pointCount: data.points.length };
+        this.scene.add(mesh);
+        this.strokes.push(mesh);
+      } else {
+        const positions = new Float32Array(data.points.length * 3);
+        for (let i = 0; i < data.points.length; i++) {
+          positions[i * 3] = data.points[i].x;
+          positions[i * 3 + 1] = data.points[i].y;
+          positions[i * 3 + 2] = data.points[i].z;
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setDrawRange(0, data.points.length);
+        const material = this._createMaterial(data.color);
+        const stroke = new THREE.Line(geometry, material);
+        stroke.userData = { color: data.color || '#222222', width: 1, layerId: data.layerId || null };
+        this.scene.add(stroke);
+        this.strokes.push(stroke);
+      }
     }
   }
 }
