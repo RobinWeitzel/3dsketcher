@@ -31,4 +31,10 @@ const inputHandler = new InputHandler(
   rotationController
 );
 
-const rotationCube = new RotationCube(drawingPlane, rotationController);
+const rotationCube = new RotationCube(
+  drawingPlane,
+  rotationController,
+  modeController,
+  sceneManager.orbitControls,
+  sceneManager.camera
+);
