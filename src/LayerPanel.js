@@ -18,25 +18,34 @@ export class LayerPanel {
   }
 
   _createPanel() {
-    // Toggle button
+    // Toggle button with stacked-layers SVG icon
     this.toggleBtn = document.createElement('button');
-    this.toggleBtn.textContent = 'Layers';
+    this.toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`;
+    this.toggleBtn.title = 'Layers';
     this.toggleBtn.style.cssText = `
       position: fixed;
       top: 12px;
       left: 12px;
-      padding: 8px 12px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       background: rgba(255, 255, 255, 0.85);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       backdrop-filter: blur(8px);
-      font-size: 14px;
+      color: #444;
       cursor: pointer;
       z-index: 101;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
     `;
+    this.toggleBtn.addEventListener('pointerover', () => { this.toggleBtn.style.background = 'rgba(0,0,0,0.08)'; });
+    this.toggleBtn.addEventListener('pointerout', () => { this.toggleBtn.style.background = 'rgba(255,255,255,0.85)'; });
     this.toggleBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.panel.style.display = this.panel.style.display === 'none' ? 'flex' : 'none';
@@ -47,19 +56,20 @@ export class LayerPanel {
     this.panel = document.createElement('div');
     this.panel.style.cssText = `
       position: fixed;
-      top: 52px;
+      top: 58px;
       left: 12px;
-      width: 200px;
+      width: 210px;
       max-height: 400px;
       overflow-y: auto;
       display: none;
       flex-direction: column;
-      gap: 4px;
-      padding: 8px;
+      gap: 6px;
+      padding: 10px;
       background: rgba(255, 255, 255, 0.92);
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
       border-radius: 12px;
       backdrop-filter: blur(8px);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       z-index: 101;
       user-select: none;
       -webkit-user-select: none;
@@ -70,15 +80,17 @@ export class LayerPanel {
     this.addBtn = document.createElement('button');
     this.addBtn.textContent = '+ Add Layer';
     this.addBtn.style.cssText = `
-      padding: 6px;
+      padding: 8px;
       border: none;
-      border-radius: 6px;
-      background: rgba(33, 150, 243, 0.15);
+      border-radius: 8px;
+      background: rgba(33, 150, 243, 0.12);
       color: #1565c0;
       font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
     `;
     this.addBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -148,27 +160,28 @@ export class LayerPanel {
       row.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 8px;
-        border-radius: 6px;
-        background: ${layer.id === this.activeLayerId ? 'rgba(33, 150, 243, 0.15)' : 'transparent'};
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: ${layer.id === this.activeLayerId ? 'rgba(33, 150, 243, 0.12)' : 'transparent'};
         cursor: pointer;
+        transition: background 0.15s;
       `;
 
       const eyeBtn = document.createElement('button');
       eyeBtn.textContent = layer.visible ? '\u{1F441}' : '\u2014';
-      eyeBtn.style.cssText = 'border: none; background: none; font-size: 14px; cursor: pointer; padding: 2px; min-width: 24px;';
+      eyeBtn.style.cssText = 'border: none; background: none; font-size: 15px; cursor: pointer; padding: 2px; min-width: 24px; line-height: 1;';
       eyeBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.toggleVisibility(layer.id); });
 
       const nameEl = document.createElement('span');
       nameEl.textContent = layer.name;
-      nameEl.style.cssText = `flex: 1; font-size: 13px; color: ${layer.visible ? '#333' : '#999'};`;
+      nameEl.style.cssText = `flex: 1; font-size: 13px; font-weight: 500; color: ${layer.visible ? '#333' : '#aaa'};`;
 
       row.addEventListener('pointerdown', (e) => { e.preventDefault(); this.setActiveLayer(layer.id); });
 
       const delBtn = document.createElement('button');
       delBtn.textContent = '\u2715';
-      delBtn.style.cssText = 'border: none; background: none; color: #999; font-size: 12px; cursor: pointer; padding: 2px;';
+      delBtn.style.cssText = 'border: none; background: none; color: #bbb; font-size: 13px; cursor: pointer; padding: 2px; transition: color 0.15s;';
       delBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.removeLayer(layer.id); });
 
       row.append(eyeBtn, nameEl, delBtn);
