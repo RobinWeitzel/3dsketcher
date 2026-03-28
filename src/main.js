@@ -89,11 +89,11 @@ modeController.onLoad(async () => {
   if (ok) modeController.exitAdjusting();
 });
 modeController.onNew(() => {
-  if (confirm('Start a new project? Current work will be lost.')) {
+  modeController.showConfirm('Start a new project? Current work will be lost.', () => {
     projectManager.newProject();
     modeController.exitAdjusting();
     planeHandles.hide();
-  }
+  });
 });
 
 // Auto-load on startup

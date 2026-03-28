@@ -649,6 +649,48 @@ export class ModeController {
     document.body.appendChild(overlay);
   }
 
+  showConfirm(message, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    `;
+
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: white; border-radius: 16px; padding: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2); min-width: 260px; text-align: center;
+    `;
+
+    const text = document.createElement('div');
+    text.textContent = message;
+    text.style.cssText = 'font-size: 15px; color: #333; margin-bottom: 20px; line-height: 1.4;';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.style.cssText = `
+      display: block; width: 100%; padding: 12px; margin: 6px 0;
+      border: none; border-radius: 10px; background: #f44336; color: white;
+      font-size: 15px; font-weight: 500; cursor: pointer;
+    `;
+    confirmBtn.addEventListener('click', () => { overlay.remove(); onConfirm(); });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+      display: block; width: 100%; padding: 12px; margin: 6px 0 0;
+      border: none; border-radius: 10px; background: rgba(0,0,0,0.05);
+      font-size: 15px; color: #666; cursor: pointer;
+    `;
+    cancelBtn.addEventListener('click', () => overlay.remove());
+
+    modal.append(text, confirmBtn, cancelBtn);
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
   onExport(format, fn) {
     this._exportCallbacks[format] = fn;
   }
