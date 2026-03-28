@@ -1,9 +1,6 @@
 // src/InputHandler.js
 import * as THREE from 'three';
 
-const DOUBLE_TAP_THRESHOLD = 300; // ms between taps
-const DOUBLE_TAP_DISTANCE = 30;   // max px distance between taps
-
 export class InputHandler {
   constructor(canvas, camera, drawingPlane, strokeManager, modeController, orbitControls, planeHandles, measurementTool) {
     this.canvas = canvas;
@@ -18,12 +15,6 @@ export class InputHandler {
     this.isDrawing = false;
     this.isErasing = false;
 
-    // Double-tap detection state
-    this._lastTapTime = 0;
-    this._lastTapX = 0;
-    this._lastTapY = 0;
-    this._didDoubleTap = false;
-
     this._raycaster = new THREE.Raycaster();
 
     this._onPointerDown = this._onPointerDown.bind(this);
@@ -34,6 +25,39 @@ export class InputHandler {
     canvas.addEventListener('pointermove', this._onPointerMove);
     canvas.addEventListener('pointerup', this._onPointerUp);
     canvas.addEventListener('pointercancel', this._onPointerUp);
+
+    // Single finger tap on canvas toggles Move Plane mode
+    // Uses touchend to distinguish quick taps from orbit/pan gestures
+    this._touchStartTime = 0;
+    this._touchStartX = 0;
+    this._touchStartY = 0;
+    this._touchMoved = false;
+
+    canvas.addEventListener('touchstart', (e) => {
+      // Only single-finger touches (multi-finger = pinch/orbit)
+      if (e.touches.length !== 1) return;
+      this._touchStartTime = performance.now();
+      this._touchStartX = e.touches[0].clientX;
+      this._touchStartY = e.touches[0].clientY;
+      this._touchMoved = false;
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - this._touchStartX;
+      const dy = e.touches[0].clientY - this._touchStartY;
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        this._touchMoved = true;
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+      // Quick single-finger tap (no drag, < 250ms)
+      const elapsed = performance.now() - this._touchStartTime;
+      if (!this._touchMoved && elapsed < 250 && e.changedTouches.length === 1) {
+        this.modeController._toggleAdjusting();
+      }
+    });
 
     // Capturing phase: disable OrbitControls during pen input
     document.addEventListener('pointerdown', (e) => {
@@ -58,34 +82,7 @@ export class InputHandler {
 
   _onPointerDown(e) {
     if (e.pointerType !== 'pen') return;
-    if (e.button !== 0) return; // Only primary pen tip
-
-    const now = performance.now();
-    const dx = e.clientX - this._lastTapX;
-    const dy = e.clientY - this._lastTapY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const timeSinceLastTap = now - this._lastTapTime;
-
-    // Check for double-tap
-    if (timeSinceLastTap < DOUBLE_TAP_THRESHOLD && dist < DOUBLE_TAP_DISTANCE) {
-      // Double-tap detected — toggle adjust mode
-      this._didDoubleTap = true;
-      // End any in-progress stroke from first tap (auto-discarded if <2 points)
-      if (this.isDrawing) {
-        this.isDrawing = false;
-        this.strokeManager.endStroke();
-      }
-      this.modeController._toggleAdjusting();
-      this._lastTapTime = 0; // Reset so third tap doesn't re-toggle
-      e.preventDefault();
-      return;
-    }
-
-    // Record this tap for double-tap detection
-    this._lastTapTime = now;
-    this._lastTapX = e.clientX;
-    this._lastTapY = e.clientY;
-    this._didDoubleTap = false;
+    if (e.button !== 0) return;
 
     const ndc = this._getNDC(e);
 
@@ -168,13 +165,6 @@ export class InputHandler {
 
   _onPointerUp(e) {
     if (e.pointerType !== 'pen') return;
-
-    // If this was a double-tap, ignore the up event
-    if (this._didDoubleTap) {
-      this._didDoubleTap = false;
-      e.preventDefault();
-      return;
-    }
 
     // End handle drag
     if (this.planeHandles.activeHandle) {
