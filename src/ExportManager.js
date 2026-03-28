@@ -59,7 +59,7 @@ export class ExportManager {
     const scene = this._buildExportScene();
     const exporter = new OBJExporter();
     const result = exporter.parse(scene);
-    const blob = new Blob([result], { type: 'text/plain' });
+    const blob = new Blob([result], { type: 'application/octet-stream' });
     this._download(blob, 'sketch.obj');
     this._disposeScene(scene);
   }
