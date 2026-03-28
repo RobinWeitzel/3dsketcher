@@ -30,13 +30,13 @@ export class ModeController {
     this.eraserActive = false;
     this.rulerActive = false;
     this.adjustingPlane = false;
+    this._holdAdjusting = false;
     this._adjustingCallbacks = [];
     this.activeColor = '#222222';
     this._colorCallbacks = [];
     this.activeWidth = 1;
     this._widthCallbacks = [];
     this._exportCallbacks = { stl: null, obj: null };
-    this._presetCallbacks = [];
     this._openDropdown = null;
 
     this._createToolbar();
@@ -95,6 +95,41 @@ export class ModeController {
     // Separator
     const sep3 = this._sep();
 
+    // Plane presets (always visible)
+    this._presetCallbacks = [];
+    const presetGroup = document.createElement('div');
+    presetGroup.style.cssText = 'display: flex; gap: 2px; align-items: center;';
+    for (const name of ['XZ', 'XY', 'YZ']) {
+      const btn = document.createElement('button');
+      btn.textContent = name;
+      btn.title = `Snap to ${name} plane`;
+      btn.style.cssText = `
+        width: 30px; height: 30px; border: none; border-radius: 8px;
+        background: rgba(0,0,0,0.05); color: #666;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+        cursor: pointer; touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.15s, color 0.15s;
+      `;
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        for (const cb of this._presetCallbacks) cb(name);
+      });
+      btn.addEventListener('pointerenter', () => { btn.style.background = 'rgba(33, 150, 243, 0.15)'; btn.style.color = '#1565c0'; });
+      btn.addEventListener('pointerleave', () => { btn.style.background = 'rgba(0,0,0,0.05)'; btn.style.color = '#666'; });
+      presetGroup.appendChild(btn);
+    }
+
+    // Move Plane toggle button
+    this.moveBtn = this._makeBtn(Move, 'Move Plane');
+    this.moveBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this._toggleAdjusting();
+    });
+
+    // Separator
+    const sep4 = this._sep();
+
     // Layers button
     this.layersBtn = this._makeBtn(Layers, 'Layers');
 
@@ -105,8 +140,11 @@ export class ModeController {
       this.undoBtn,
       this.redoBtn,
       sep2,
-      this._fileBtn.wrapper,
+      presetGroup,
+      this.moveBtn,
       sep3,
+      this._fileBtn.wrapper,
+      sep4,
       this.layersBtn
     );
 
@@ -227,35 +265,7 @@ export class ModeController {
     });
     this._clearMeasItem.style.display = 'none';
 
-    // Move Plane
-    this._moveItem = this._makeDropdownItem(Move, 'Move Plane', () => {
-      this._toggleAdjusting();
-      this._closeDropdowns();
-    });
-
-    // Plane presets
-    this._presetContainer = document.createElement('div');
-    this._presetContainer.style.cssText = 'display: none; gap: 3px; padding: 2px 0;';
-    for (const name of ['XZ', 'XY', 'YZ']) {
-      const btn = document.createElement('button');
-      btn.textContent = name;
-      btn.title = `Snap to ${name} plane`;
-      btn.style.cssText = `
-        flex: 1; height: 28px; border: none; border-radius: 6px;
-        background: rgba(33, 150, 243, 0.1); color: #1565c0;
-        font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
-        cursor: pointer; touch-action: manipulation;
-        -webkit-tap-highlight-color: transparent;
-      `;
-      btn.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        for (const cb of this._presetCallbacks) cb(name);
-        this._closeDropdowns();
-      });
-      this._presetContainer.appendChild(btn);
-    }
-
-    panel.append(this._drawItem, this._eraserItem, this._rulerItem, this._clearMeasItem, this._moveItem, this._presetContainer);
+    panel.append(this._drawItem, this._eraserItem, this._rulerItem, this._clearMeasItem);
     return panel;
   }
 
@@ -443,18 +453,26 @@ export class ModeController {
 
   _toggleAdjusting() {
     if (this.adjustingPlane) {
+      this._holdAdjusting = false;
       this.exitAdjusting();
       return;
     }
     this.eraserActive = false;
     this.rulerActive = false;
-    this.enterAdjusting();
+    this.enterAdjusting(false); // false = toggle mode, not hold
   }
 
-  enterAdjusting() {
+  enterAdjusting(hold = false) {
+    this._holdAdjusting = hold;
     this.adjustingPlane = true;
     this._updateButtonStates();
     for (const cb of this._adjustingCallbacks) cb(true);
+  }
+
+  exitHoldAdjusting() {
+    if (!this._holdAdjusting) return; // Don't exit if in toggle mode
+    this._holdAdjusting = false;
+    this.exitAdjusting();
   }
 
   exitAdjusting() {
@@ -563,11 +581,16 @@ export class ModeController {
     this._setItemActive(this._drawItem, !this.eraserActive && !this.rulerActive && !this.adjustingPlane, TOOL_COLORS.draw);
     this._setItemActive(this._eraserItem, this.eraserActive, TOOL_COLORS.eraser);
     this._setItemActive(this._rulerItem, this.rulerActive, TOOL_COLORS.ruler);
-    this._setItemActive(this._moveItem, this.adjustingPlane, TOOL_COLORS.move);
 
     // Show/hide conditional items
     this._clearMeasItem.style.display = this.rulerActive ? 'flex' : 'none';
-    this._presetContainer.style.display = this.adjustingPlane ? 'flex' : 'none';
+
+    // Move Plane toolbar button
+    if (this.moveBtn) {
+      this.moveBtn.style.background = this.adjustingPlane
+        ? 'rgba(33, 150, 243, 0.15)' : 'rgba(0, 0, 0, 0.05)';
+      this.moveBtn.style.color = this.adjustingPlane ? '#1565c0' : '#444';
+    }
   }
 
   _setItemActive(item, isActive, colors) {

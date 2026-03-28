@@ -14,6 +14,7 @@ export class InputHandler {
 
     this.isDrawing = false;
     this.isErasing = false;
+    this._barrelHold = false;
 
     this._raycaster = new THREE.Raycaster();
 
@@ -49,6 +50,14 @@ export class InputHandler {
 
   _onPointerDown(e) {
     if (e.pointerType !== 'pen') return;
+
+    // Barrel button → hold-to-adjust
+    if (e.button === 5) {
+      this._barrelHold = true;
+      this.modeController.enterAdjusting(true); // true = hold mode
+      e.preventDefault();
+      return;
+    }
 
     const ndc = this._getNDC(e);
 
@@ -131,6 +140,14 @@ export class InputHandler {
 
   _onPointerUp(e) {
     if (e.pointerType !== 'pen') return;
+
+    // Barrel button release → exit hold-to-adjust
+    if (e.button === 5 && this._barrelHold) {
+      this._barrelHold = false;
+      this.modeController.exitHoldAdjusting();
+      e.preventDefault();
+      return;
+    }
 
     // End handle drag
     if (this.planeHandles.activeHandle) {
