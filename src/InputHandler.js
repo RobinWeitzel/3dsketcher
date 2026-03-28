@@ -1,6 +1,9 @@
 // src/InputHandler.js
 import * as THREE from 'three';
 
+const DOUBLE_TAP_THRESHOLD = 300; // ms between taps
+const DOUBLE_TAP_DISTANCE = 30;   // max px distance between taps
+
 export class InputHandler {
   constructor(canvas, camera, drawingPlane, strokeManager, modeController, orbitControls, planeHandles, measurementTool) {
     this.canvas = canvas;
@@ -14,7 +17,12 @@ export class InputHandler {
 
     this.isDrawing = false;
     this.isErasing = false;
-    this._barrelHold = false;
+
+    // Double-tap detection state
+    this._lastTapTime = 0;
+    this._lastTapX = 0;
+    this._lastTapY = 0;
+    this._didDoubleTap = false;
 
     this._raycaster = new THREE.Raycaster();
 
@@ -26,9 +34,6 @@ export class InputHandler {
     canvas.addEventListener('pointermove', this._onPointerMove);
     canvas.addEventListener('pointerup', this._onPointerUp);
     canvas.addEventListener('pointercancel', this._onPointerUp);
-
-    // Prevent context menu from pen barrel button (button 2 = right-click)
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // Capturing phase: disable OrbitControls during pen input
     document.addEventListener('pointerdown', (e) => {
@@ -51,23 +56,36 @@ export class InputHandler {
     };
   }
 
-  // Check if pen barrel button is pressed via the buttons bitmask
-  // Barrel button = bit 1 (value 2) in the buttons property
-  _isBarrelPressed(e) {
-    return e.pointerType === 'pen' && (e.buttons & 2) !== 0;
-  }
-
   _onPointerDown(e) {
     if (e.pointerType !== 'pen') return;
+    if (e.button !== 0) return; // Only primary pen tip
 
-    // Pen barrel button (button === 2 per W3C Pointer Events spec)
-    // This is the same as right-click for mouse, so we check pointerType
-    if (e.button === 2) {
-      this._barrelHold = true;
-      this.modeController.enterAdjusting(true);
+    const now = performance.now();
+    const dx = e.clientX - this._lastTapX;
+    const dy = e.clientY - this._lastTapY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const timeSinceLastTap = now - this._lastTapTime;
+
+    // Check for double-tap
+    if (timeSinceLastTap < DOUBLE_TAP_THRESHOLD && dist < DOUBLE_TAP_DISTANCE) {
+      // Double-tap detected — toggle adjust mode
+      this._didDoubleTap = true;
+      // End any in-progress stroke from first tap (auto-discarded if <2 points)
+      if (this.isDrawing) {
+        this.isDrawing = false;
+        this.strokeManager.endStroke();
+      }
+      this.modeController._toggleAdjusting();
+      this._lastTapTime = 0; // Reset so third tap doesn't re-toggle
       e.preventDefault();
       return;
     }
+
+    // Record this tap for double-tap detection
+    this._lastTapTime = now;
+    this._lastTapX = e.clientX;
+    this._lastTapY = e.clientY;
+    this._didDoubleTap = false;
 
     const ndc = this._getNDC(e);
 
@@ -116,17 +134,6 @@ export class InputHandler {
   _onPointerMove(e) {
     if (e.pointerType !== 'pen') return;
 
-    // Detect barrel button via buttons bitmask during move/hover
-    // This catches cases where pointerdown didn't fire for the barrel button
-    // (known Chromium bug with Samsung S Pen)
-    if (this._isBarrelPressed(e) && !this._barrelHold) {
-      this._barrelHold = true;
-      this.modeController.enterAdjusting(true);
-    } else if (!this._isBarrelPressed(e) && this._barrelHold) {
-      this._barrelHold = false;
-      this.modeController.exitHoldAdjusting();
-    }
-
     // Handle dragging
     if (this.planeHandles.activeHandle) {
       const ndc = this._getNDC(e);
@@ -162,10 +169,9 @@ export class InputHandler {
   _onPointerUp(e) {
     if (e.pointerType !== 'pen') return;
 
-    // Barrel button release
-    if (e.button === 2 && this._barrelHold) {
-      this._barrelHold = false;
-      this.modeController.exitHoldAdjusting();
+    // If this was a double-tap, ignore the up event
+    if (this._didDoubleTap) {
+      this._didDoubleTap = false;
       e.preventDefault();
       return;
     }

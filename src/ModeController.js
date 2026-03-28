@@ -30,7 +30,6 @@ export class ModeController {
     this.eraserActive = false;
     this.rulerActive = false;
     this.adjustingPlane = false;
-    this._holdAdjusting = false;
     this._adjustingCallbacks = [];
     this.activeColor = '#222222';
     this._colorCallbacks = [];
@@ -458,26 +457,18 @@ export class ModeController {
 
   _toggleAdjusting() {
     if (this.adjustingPlane) {
-      this._holdAdjusting = false;
       this.exitAdjusting();
       return;
     }
     this.eraserActive = false;
     this.rulerActive = false;
-    this.enterAdjusting(false); // false = toggle mode, not hold
+    this.enterAdjusting();
   }
 
-  enterAdjusting(hold = false) {
-    this._holdAdjusting = hold;
+  enterAdjusting() {
     this.adjustingPlane = true;
     this._updateButtonStates();
     for (const cb of this._adjustingCallbacks) cb(true);
-  }
-
-  exitHoldAdjusting() {
-    if (!this._holdAdjusting) return; // Don't exit if in toggle mode
-    this._holdAdjusting = false;
-    this.exitAdjusting();
   }
 
   exitAdjusting() {
