@@ -144,8 +144,9 @@ export class LayerPanel {
     cancelBtn.addEventListener('click', () => overlay.remove());
     modal.append(text, confirmBtn, cancelBtn);
     overlay.appendChild(modal);
-    requestAnimationFrame(() => {
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    const openedAt = Date.now();
+    overlay.addEventListener('pointerdown', (e) => {
+      if (e.target === overlay && Date.now() - openedAt > 300) overlay.remove();
     });
     document.body.appendChild(overlay);
   }
