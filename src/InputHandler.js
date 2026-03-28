@@ -27,6 +27,9 @@ export class InputHandler {
     canvas.addEventListener('pointerup', this._onPointerUp);
     canvas.addEventListener('pointercancel', this._onPointerUp);
 
+    // Prevent context menu from pen barrel button (button 2 = right-click)
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
     // Capturing phase: disable OrbitControls during pen input
     document.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'pen' && e.target === canvas) {
@@ -48,13 +51,20 @@ export class InputHandler {
     };
   }
 
+  // Check if pen barrel button is pressed via the buttons bitmask
+  // Barrel button = bit 1 (value 2) in the buttons property
+  _isBarrelPressed(e) {
+    return e.pointerType === 'pen' && (e.buttons & 2) !== 0;
+  }
+
   _onPointerDown(e) {
     if (e.pointerType !== 'pen') return;
 
-    // Barrel button → hold-to-adjust
-    if (e.button === 5) {
+    // Pen barrel button (button === 2 per W3C Pointer Events spec)
+    // This is the same as right-click for mouse, so we check pointerType
+    if (e.button === 2) {
       this._barrelHold = true;
-      this.modeController.enterAdjusting(true); // true = hold mode
+      this.modeController.enterAdjusting(true);
       e.preventDefault();
       return;
     }
@@ -106,6 +116,17 @@ export class InputHandler {
   _onPointerMove(e) {
     if (e.pointerType !== 'pen') return;
 
+    // Detect barrel button via buttons bitmask during move/hover
+    // This catches cases where pointerdown didn't fire for the barrel button
+    // (known Chromium bug with Samsung S Pen)
+    if (this._isBarrelPressed(e) && !this._barrelHold) {
+      this._barrelHold = true;
+      this.modeController.enterAdjusting(true);
+    } else if (!this._isBarrelPressed(e) && this._barrelHold) {
+      this._barrelHold = false;
+      this.modeController.exitHoldAdjusting();
+    }
+
     // Handle dragging
     if (this.planeHandles.activeHandle) {
       const ndc = this._getNDC(e);
@@ -141,8 +162,8 @@ export class InputHandler {
   _onPointerUp(e) {
     if (e.pointerType !== 'pen') return;
 
-    // Barrel button release → exit hold-to-adjust
-    if (e.button === 5 && this._barrelHold) {
+    // Barrel button release
+    if (e.button === 2 && this._barrelHold) {
       this._barrelHold = false;
       this.modeController.exitHoldAdjusting();
       e.preventDefault();

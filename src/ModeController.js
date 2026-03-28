@@ -95,28 +95,52 @@ export class ModeController {
     // Separator
     const sep3 = this._sep();
 
-    // Plane presets (always visible)
+    // Plane presets (always visible) — styled as axis-colored plane icons
     this._presetCallbacks = [];
     const presetGroup = document.createElement('div');
     presetGroup.style.cssText = 'display: flex; gap: 2px; align-items: center;';
+
+    // Each preset gets a small SVG showing the plane orientation with axis colors
+    // X = red (#e53935), Y = green (#43a047), Z = blue (#1e88e5)
+    const presetSvgs = {
+      XZ: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M4 12l6-4 6 4-6 4z" fill="rgba(0,0,0,0.06)" stroke="#888" stroke-width="1"/>
+        <line x1="10" y1="12" x2="16" y2="8" stroke="#e53935" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="10" y1="12" x2="4" y2="8" stroke="#1e88e5" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="10" y="17" text-anchor="middle" font-size="5" font-weight="700" fill="#888">XZ</text>
+      </svg>`,
+      XY: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M5 5h10v10H5z" fill="rgba(0,0,0,0.06)" stroke="#888" stroke-width="1"/>
+        <line x1="5" y1="15" x2="15" y2="15" stroke="#e53935" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="5" y1="15" x2="5" y2="5" stroke="#43a047" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="10" y="12" text-anchor="middle" font-size="5" font-weight="700" fill="#888">XY</text>
+      </svg>`,
+      YZ: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M5 5h10v10H5z" fill="rgba(0,0,0,0.06)" stroke="#888" stroke-width="1"/>
+        <line x1="5" y1="15" x2="5" y2="5" stroke="#43a047" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="5" y1="15" x2="15" y2="15" stroke="#1e88e5" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="10" y="12" text-anchor="middle" font-size="5" font-weight="700" fill="#888">YZ</text>
+      </svg>`,
+    };
+
     for (const name of ['XZ', 'XY', 'YZ']) {
       const btn = document.createElement('button');
-      btn.textContent = name;
+      btn.innerHTML = presetSvgs[name];
       btn.title = `Snap to ${name} plane`;
       btn.style.cssText = `
-        width: 30px; height: 30px; border: none; border-radius: 8px;
-        background: rgba(0,0,0,0.05); color: #666;
-        font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+        width: 40px; height: 40px; border: none; border-radius: 10px;
+        background: rgba(0, 0, 0, 0.05); color: #444;
+        display: flex; align-items: center; justify-content: center;
         cursor: pointer; touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
-        transition: background 0.15s, color 0.15s;
+        transition: background 0.15s;
       `;
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         for (const cb of this._presetCallbacks) cb(name);
       });
-      btn.addEventListener('pointerenter', () => { btn.style.background = 'rgba(33, 150, 243, 0.15)'; btn.style.color = '#1565c0'; });
-      btn.addEventListener('pointerleave', () => { btn.style.background = 'rgba(0,0,0,0.05)'; btn.style.color = '#666'; });
+      btn.addEventListener('pointerenter', () => { btn.style.background = 'rgba(0,0,0,0.1)'; });
+      btn.addEventListener('pointerleave', () => { btn.style.background = 'rgba(0,0,0,0.05)'; });
       presetGroup.appendChild(btn);
     }
 
