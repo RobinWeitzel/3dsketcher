@@ -1,21 +1,15 @@
 // src/ModeController.js
 
-// SVG icon paths (20x20 viewBox)
-const ICONS = {
-  new: '<path d="M6 2h8l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 2v4h4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v6M7 12h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
-  save: '<path d="M4 14v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  load: '<path d="M3 7h4l2-2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" fill="none" stroke="currentColor" stroke-width="1.5"/>',
-  undo: '<path d="M4 7h8a4 4 0 0 1 0 8H9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M7 4 4 7l3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  redo: '<path d="M16 7H8a4 4 0 0 0 0 8h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 4l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  eraser: '<path d="M16.24 3.56a2.21 2.21 0 0 1 .3 3.11l-8.5 8.5a2 2 0 0 1-1.42.59H3.5l-1 1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="m3.88 12.88 3.54 3.54" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m12.56 5.12 3.32 3.32" fill="none" stroke="currentColor" stroke-width="1.5"/>',
-  ruler: '<path d="M3 17 17 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M7 17l-1-2M11 13l-1-2M15 9l-1-2M5 15l-2-1M9 11l-2-1M13 7l-2-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>',
-  trash: '<path d="M5 5h10l-1 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 5z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5h14M8 5V3h4v2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
-  move: '<path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 3l-2 2M10 3l2 2M10 17l-2-2M10 17l2-2M3 10l2-2M3 10l2 2M17 10l-2-2M17 10l-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  export: '<path d="M4 14v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 12V3M6.5 6.5 10 3l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-};
+import { createElement } from 'lucide';
+import {
+  Palette, Pencil, Eraser, Ruler, Move,
+  Undo2, Redo2, FilePlus, Save, FolderOpen,
+  Download, Trash2, ChevronDown
+} from 'lucide';
 
-function svgIcon(name, size = 20) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none">${ICONS[name]}</svg>`;
+function lucideIcon(iconData, size = 18) {
+  const el = createElement(iconData, { width: size, height: size, 'stroke-width': 2 });
+  return el.outerHTML;
 }
 
 function widthSvg(thickness) {
@@ -24,16 +18,12 @@ function widthSvg(thickness) {
   </svg>`;
 }
 
-const BTN_BASE = `
-  width: 40px; height: 40px; border: none; border-radius: 10px;
-  background: rgba(0, 0, 0, 0.05); color: #444;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s;
-`;
-
-const SEPARATOR = 'width: 1px; align-self: stretch; background: rgba(0,0,0,0.08); margin: 2px 2px;';
+const TOOL_COLORS = {
+  draw: { bg: 'rgba(33, 150, 243, 0.15)', fg: '#1565c0' },
+  eraser: { bg: 'rgba(244, 67, 54, 0.15)', fg: '#d32f2f' },
+  ruler: { bg: 'rgba(255, 152, 0, 0.15)', fg: '#e65100' },
+  move: { bg: 'rgba(33, 150, 243, 0.15)', fg: '#1565c0' },
+};
 
 export class ModeController {
   constructor() {
@@ -46,12 +36,16 @@ export class ModeController {
     this.activeWidth = 1;
     this._widthCallbacks = [];
     this._exportCallbacks = { stl: null, obj: null };
+    this._presetCallbacks = [];
+    this._openDropdown = null;
 
     this._createToolbar();
+    this._setupGlobalClose();
   }
 
+  // ── Toolbar construction ──────────────────────────────────────
+
   _createToolbar() {
-    // Outer wrapper
     const toolbar = document.createElement('div');
     toolbar.id = 'toolbar';
     toolbar.style.cssText = `
@@ -60,8 +54,7 @@ export class ModeController {
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      gap: 4px;
       padding: 8px 10px;
       background: rgba(255, 255, 255, 0.88);
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.04);
@@ -71,13 +64,57 @@ export class ModeController {
       z-index: 100;
       user-select: none;
       -webkit-user-select: none;
+      align-items: center;
     `;
 
-    // --- Top row: Colors + Width ---
-    const topRow = document.createElement('div');
-    topRow.style.cssText = 'display: flex; gap: 5px; align-items: center; justify-content: center;';
+    // Brush dropdown
+    this._brushDropdown = this._buildBrushDropdown();
+    this._brushBtn = this._makeDropdownToggle(Palette, 'Brush', this._brushDropdown);
+    this._brushIndicator = this._createColorIndicator();
+    this._brushBtn.wrapper.style.position = 'relative';
+    this._brushBtn.wrapper.appendChild(this._brushIndicator);
+
+    // Tools dropdown
+    this._toolsDropdown = this._buildToolsDropdown();
+    this._toolsBtn = this._makeDropdownToggle(Pencil, 'Tools', this._toolsDropdown);
+
+    // Separator
+    const sep1 = this._sep();
+
+    // Undo / Redo
+    this.undoBtn = this._makeBtn(Undo2, 'Undo');
+    this.redoBtn = this._makeBtn(Redo2, 'Redo');
+
+    // Separator
+    const sep2 = this._sep();
+
+    // File dropdown
+    this._fileDropdown = this._buildFileDropdown();
+    this._fileBtn = this._makeDropdownToggle(Save, 'File', this._fileDropdown);
+
+    toolbar.append(
+      this._brushBtn.wrapper,
+      this._toolsBtn.wrapper,
+      sep1,
+      this.undoBtn,
+      this.redoBtn,
+      sep2,
+      this._fileBtn.wrapper
+    );
+
+    document.body.appendChild(toolbar);
+    this._updateButtonStates();
+    this._updateBrushIndicator();
+  }
+
+  // ── Dropdown builders ─────────────────────────────────────────
+
+  _buildBrushDropdown() {
+    const panel = this._makeDropdownPanel();
 
     // Color swatches
+    const colorGrid = document.createElement('div');
+    colorGrid.style.cssText = 'display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 4px 0;';
     const presetColors = ['#222222', '#f44336', '#2196f3', '#4caf50', '#ff9800', '#9c27b0', '#ffffff', '#9e9e9e'];
     this._colorSwatches = [];
 
@@ -93,11 +130,13 @@ export class ModeController {
         ${color === '#ffffff' ? 'box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);' : ''}
       `;
       swatch.addEventListener('pointerdown', (e) => { e.preventDefault(); this._setColor(color); });
-      topRow.appendChild(swatch);
+      colorGrid.appendChild(swatch);
       this._colorSwatches.push({ el: swatch, color });
     }
 
     // Custom color
+    const customRow = document.createElement('div');
+    customRow.style.cssText = 'display: flex; align-items: center; gap: 6px; padding: 4px 0;';
     const customInput = document.createElement('input');
     customInput.type = 'color';
     customInput.value = '#222222';
@@ -107,15 +146,19 @@ export class ModeController {
       -webkit-appearance: none; appearance: none;
     `;
     customInput.addEventListener('input', (e) => { this._setColor(e.target.value); });
-    topRow.appendChild(customInput);
     this._customColorInput = customInput;
+    const customLabel = document.createElement('span');
+    customLabel.textContent = 'Custom';
+    customLabel.style.cssText = 'font-size: 12px; color: #666;';
+    customRow.append(customInput, customLabel);
 
     // Separator
-    const sep1 = document.createElement('div');
-    sep1.style.cssText = SEPARATOR;
-    topRow.appendChild(sep1);
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height: 1px; background: rgba(0,0,0,0.08); margin: 6px 0;';
 
-    // Width buttons (SVG lines)
+    // Width buttons
+    const widthRow = document.createElement('div');
+    widthRow.style.cssText = 'display: flex; gap: 4px;';
     this._widthButtons = [];
     const widths = [
       { thickness: 1.5, value: 1, title: 'Thin' },
@@ -125,58 +168,72 @@ export class ModeController {
 
     for (const w of widths) {
       const btn = document.createElement('button');
-      btn.innerHTML = widthSvg(w.thickness);
+      btn.innerHTML = widthSvg(w.thickness) + `<span style="font-size:11px;margin-left:2px;">${w.title}</span>`;
       btn.title = w.title;
       btn.style.cssText = `
-        width: 36px; height: 28px; border: 2px solid transparent;
+        flex: 1; height: 32px; border: 2px solid transparent;
         border-radius: 8px; background: rgba(0,0,0,0.04); color: #555;
         display: flex; align-items: center; justify-content: center;
         cursor: pointer; touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
         transition: border-color 0.15s, background 0.15s;
+        gap: 2px;
       `;
       btn.addEventListener('pointerdown', (e) => { e.preventDefault(); this._setWidth(w.value); });
-      topRow.appendChild(btn);
+      widthRow.appendChild(btn);
       this._widthButtons.push({ el: btn, value: w.value });
     }
 
-    // --- Bottom row: Action buttons ---
-    const bottomRow = document.createElement('div');
-    bottomRow.style.cssText = 'display: flex; gap: 4px; align-items: center; justify-content: center;';
+    panel.append(colorGrid, customRow, sep, widthRow);
+    return panel;
+  }
 
-    // File group
-    this.newBtn = this._createIconButton('new', 'New Project', null);
-    this.saveBtn = this._createIconButton('save', 'Save', null);
-    this.loadBtn = this._createIconButton('load', 'Open', null);
+  _buildToolsDropdown() {
+    const panel = this._makeDropdownPanel();
 
-    const sep2 = document.createElement('div');
-    sep2.style.cssText = SEPARATOR;
+    // Draw
+    this._drawItem = this._makeDropdownItem(Pencil, 'Draw', () => {
+      this.eraserActive = false;
+      this.rulerActive = false;
+      if (this.adjustingPlane) this.exitAdjusting();
+      this._updateButtonStates();
+      this._closeDropdowns();
+    });
 
-    // Undo/Redo
-    this.undoBtn = this._createIconButton('undo', 'Undo', null);
-    this.redoBtn = this._createIconButton('redo', 'Redo', null);
+    // Eraser
+    this._eraserItem = this._makeDropdownItem(Eraser, 'Eraser', () => {
+      this._toggleEraser();
+      this._closeDropdowns();
+    });
 
-    const sep3 = document.createElement('div');
-    sep3.style.cssText = SEPARATOR;
+    // Ruler
+    this._rulerItem = this._makeDropdownItem(Ruler, 'Ruler', () => {
+      this._toggleRuler();
+      this._closeDropdowns();
+    });
 
-    // Tools
-    this.eraserBtn = this._createIconButton('eraser', 'Eraser', () => this._toggleEraser());
-    this.rulerBtn = this._createIconButton('ruler', 'Ruler', () => this._toggleRuler());
-    this.clearMeasBtn = this._createIconButton('trash', 'Clear Measurements', null);
-    this.clearMeasBtn.style.display = 'none';
-    this.moveBtn = this._createIconButton('move', 'Move Plane', () => this._toggleAdjusting());
+    // Clear Measurements
+    this._clearMeasItem = this._makeDropdownItem(Trash2, 'Clear Measurements', () => {
+      this._closeDropdowns();
+      if (this._clearMeasHandler) this._clearMeasHandler();
+    });
+    this._clearMeasItem.style.display = 'none';
 
-    // Plane presets (visible only in adjust mode)
-    this._presetBar = document.createElement('div');
-    this._presetBar.style.cssText = 'display: none; gap: 3px; align-items: center;';
+    // Move Plane
+    this._moveItem = this._makeDropdownItem(Move, 'Move Plane', () => {
+      this._toggleAdjusting();
+      this._closeDropdowns();
+    });
 
-    this._presetCallbacks = [];
+    // Plane presets
+    this._presetContainer = document.createElement('div');
+    this._presetContainer.style.cssText = 'display: none; gap: 3px; padding: 2px 0;';
     for (const name of ['XZ', 'XY', 'YZ']) {
       const btn = document.createElement('button');
       btn.textContent = name;
       btn.title = `Snap to ${name} plane`;
       btn.style.cssText = `
-        width: 32px; height: 32px; border: none; border-radius: 8px;
+        flex: 1; height: 28px; border: none; border-radius: 6px;
         background: rgba(33, 150, 243, 0.1); color: #1565c0;
         font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
         cursor: pointer; touch-action: manipulation;
@@ -185,57 +242,192 @@ export class ModeController {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         for (const cb of this._presetCallbacks) cb(name);
+        this._closeDropdowns();
       });
-      this._presetBar.appendChild(btn);
+      this._presetContainer.appendChild(btn);
     }
 
-    const sep4 = document.createElement('div');
-    sep4.style.cssText = SEPARATOR;
-
-    // Export
-    this.exportBtn = this._createIconButton('export', 'Export', () => this._showExportModal());
-
-    bottomRow.append(
-      this.newBtn, this.saveBtn, this.loadBtn,
-      sep2,
-      this.undoBtn, this.redoBtn,
-      sep3,
-      this.eraserBtn, this.rulerBtn, this.clearMeasBtn, this.moveBtn,
-      this._presetBar,
-      sep4,
-      this.exportBtn
-    );
-
-    toolbar.append(topRow, bottomRow);
-    document.body.appendChild(toolbar);
-
-    this._updateButtonStates();
-    this._updateColorSwatches();
-    this._updateWidthButtons();
+    panel.append(this._drawItem, this._eraserItem, this._rulerItem, this._clearMeasItem, this._moveItem, this._presetContainer);
+    return panel;
   }
 
-  _createIconButton(iconName, title, onClick) {
+  _buildFileDropdown() {
+    const panel = this._makeDropdownPanel();
+
+    this._newItem = this._makeDropdownItem(FilePlus, 'New Project', () => {
+      this._closeDropdowns();
+      if (this._newHandler) this._newHandler();
+    });
+    this._saveItem = this._makeDropdownItem(Save, 'Save', () => {
+      this._closeDropdowns();
+      if (this._saveHandler) this._saveHandler();
+    });
+    this._loadItem = this._makeDropdownItem(FolderOpen, 'Open', () => {
+      this._closeDropdowns();
+      if (this._loadHandler) this._loadHandler();
+    });
+
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height: 1px; background: rgba(0,0,0,0.08); margin: 4px 0;';
+
+    this._exportItem = this._makeDropdownItem(Download, 'Export', () => {
+      this._closeDropdowns();
+      this._showExportModal();
+    });
+
+    panel.append(this._newItem, this._saveItem, this._loadItem, sep, this._exportItem);
+    return panel;
+  }
+
+  // ── UI primitives ─────────────────────────────────────────────
+
+  _makeDropdownPanel() {
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 160px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+      border-radius: 12px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 110;
+      flex-direction: column;
+      gap: 2px;
+    `;
+    return panel;
+  }
+
+  _makeDropdownItem(iconData, label, onClick) {
+    const item = document.createElement('button');
+    item.innerHTML = `${lucideIcon(iconData, 16)}<span style="margin-left:8px;font-size:13px;">${label}</span>`;
+    item.style.cssText = `
+      display: flex; align-items: center; width: 100%;
+      padding: 6px 8px; border: none; border-radius: 8px;
+      background: transparent; color: #444; cursor: pointer;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s;
+      text-align: left;
+    `;
+    item.addEventListener('mouseenter', () => { if (!item._activeColor) item.style.background = 'rgba(0,0,0,0.05)'; });
+    item.addEventListener('mouseleave', () => { if (!item._activeColor) item.style.background = 'transparent'; });
+    item.addEventListener('pointerdown', (e) => { e.preventDefault(); onClick(); });
+    return item;
+  }
+
+  _makeDropdownToggle(iconData, title, dropdownPanel) {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position: relative;';
+
     const btn = document.createElement('button');
-    btn.innerHTML = svgIcon(iconName);
+    btn.innerHTML = `${lucideIcon(iconData, 18)}<span style="margin-left:1px;">${lucideIcon(ChevronDown, 12)}</span>`;
     btn.title = title;
-    btn.style.cssText = BTN_BASE;
-    if (onClick) btn.addEventListener('pointerdown', (e) => { e.preventDefault(); onClick(); });
+    btn.style.cssText = `
+      height: 40px; padding: 0 8px; border: none; border-radius: 10px;
+      background: rgba(0, 0, 0, 0.05); color: #444;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, color 0.15s;
+      gap: 2px;
+    `;
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._toggleDropdown(dropdownPanel);
+    });
+
+    wrapper.appendChild(btn);
+    wrapper.appendChild(dropdownPanel);
+    return { wrapper, btn };
+  }
+
+  _makeBtn(iconData, title) {
+    const btn = document.createElement('button');
+    btn.innerHTML = lucideIcon(iconData, 18);
+    btn.title = title;
+    btn.style.cssText = `
+      width: 40px; height: 40px; border: none; border-radius: 10px;
+      background: rgba(0, 0, 0, 0.05); color: #444;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, color 0.15s;
+    `;
     return btn;
   }
 
-  // Keep legacy method for any external callers
-  _createButton(label, onClick) {
-    return this._createIconButton('new', label, onClick);
+  _sep() {
+    const el = document.createElement('div');
+    el.style.cssText = 'width: 1px; align-self: stretch; background: rgba(0,0,0,0.08); margin: 2px 2px;';
+    return el;
   }
+
+  _createColorIndicator() {
+    const dot = document.createElement('div');
+    dot.style.cssText = `
+      position: absolute; bottom: 2px; right: 2px;
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.9);
+      box-shadow: 0 0 2px rgba(0,0,0,0.2);
+      pointer-events: none;
+    `;
+    return dot;
+  }
+
+  _updateBrushIndicator() {
+    this._brushIndicator.style.background = this.activeColor;
+    // For white color, add a subtle border to keep it visible
+    if (this.activeColor === '#ffffff') {
+      this._brushIndicator.style.border = '1.5px solid rgba(0,0,0,0.2)';
+    } else {
+      this._brushIndicator.style.border = '1.5px solid rgba(255,255,255,0.9)';
+    }
+  }
+
+  // ── Dropdown management ───────────────────────────────────────
+
+  _toggleDropdown(panel) {
+    if (this._openDropdown === panel) {
+      this._closeDropdowns();
+    } else {
+      this._closeDropdowns();
+      panel.style.display = 'flex';
+      this._openDropdown = panel;
+    }
+  }
+
+  _closeDropdowns() {
+    if (this._openDropdown) {
+      this._openDropdown.style.display = 'none';
+      this._openDropdown = null;
+    }
+  }
+
+  _setupGlobalClose() {
+    document.addEventListener('pointerdown', (e) => {
+      if (this._openDropdown && !this._openDropdown.contains(e.target) &&
+          !this._openDropdown.parentElement.contains(e.target)) {
+        this._closeDropdowns();
+      }
+    });
+  }
+
+  // ── Public API (preserved for main.js) ────────────────────────
 
   setUndoRedoHandlers(onUndo, onRedo) {
     this.undoBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); onUndo(); });
     this.redoBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); onRedo(); });
   }
 
-  onSave(fn) { this.saveBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); }
-  onLoad(fn) { this.loadBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); }
-  onNew(fn) { this.newBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); }
+  onSave(fn) { this._saveHandler = fn; }
+  onLoad(fn) { this._loadHandler = fn; }
+  onNew(fn) { this._newHandler = fn; }
 
   onAdjustingChange(callback) {
     this._adjustingCallbacks.push(callback);
@@ -273,9 +465,7 @@ export class ModeController {
     this._updateButtonStates();
   }
 
-  onClearMeasurements(fn) {
-    this.clearMeasBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); });
-  }
+  onClearMeasurements(fn) { this._clearMeasHandler = fn; }
 
   _toggleEraser() {
     this.eraserActive = !this.eraserActive;
@@ -289,6 +479,7 @@ export class ModeController {
   _setColor(color) {
     this.activeColor = color;
     this._updateColorSwatches();
+    this._updateBrushIndicator();
     for (const cb of this._colorCallbacks) cb(color);
   }
 
@@ -336,24 +527,50 @@ export class ModeController {
   }
 
   _updateButtonStates() {
-    // Eraser
-    this.eraserBtn.style.background = this.eraserActive
-      ? 'rgba(244, 67, 54, 0.15)' : 'rgba(0, 0, 0, 0.05)';
-    this.eraserBtn.style.color = this.eraserActive ? '#d32f2f' : '#444';
+    // Determine active tool for the Tools dropdown button icon
+    let activeIcon = Pencil;
+    let activeBg = 'rgba(0, 0, 0, 0.05)';
+    let activeFg = '#444';
 
-    // Ruler
-    this.rulerBtn.style.background = this.rulerActive
-      ? 'rgba(255, 152, 0, 0.15)' : 'rgba(0, 0, 0, 0.05)';
-    this.rulerBtn.style.color = this.rulerActive ? '#e65100' : '#444';
-    this.clearMeasBtn.style.display = this.rulerActive ? '' : 'none';
+    if (this.eraserActive) {
+      activeIcon = Eraser;
+      activeBg = TOOL_COLORS.eraser.bg;
+      activeFg = TOOL_COLORS.eraser.fg;
+    } else if (this.rulerActive) {
+      activeIcon = Ruler;
+      activeBg = TOOL_COLORS.ruler.bg;
+      activeFg = TOOL_COLORS.ruler.fg;
+    } else if (this.adjustingPlane) {
+      activeIcon = Move;
+      activeBg = TOOL_COLORS.move.bg;
+      activeFg = TOOL_COLORS.move.fg;
+    }
 
-    // Move
-    this.moveBtn.style.background = this.adjustingPlane
-      ? 'rgba(33, 150, 243, 0.15)' : 'rgba(0, 0, 0, 0.05)';
-    this.moveBtn.style.color = this.adjustingPlane ? '#1565c0' : '#444';
+    // Update tools button icon to reflect active tool
+    this._toolsBtn.btn.innerHTML = `${lucideIcon(activeIcon, 18)}<span style="margin-left:1px;">${lucideIcon(ChevronDown, 12)}</span>`;
+    this._toolsBtn.btn.style.background = activeBg;
+    this._toolsBtn.btn.style.color = activeFg;
 
-    // Presets
-    this._presetBar.style.display = this.adjustingPlane ? 'flex' : 'none';
+    // Update dropdown items active state
+    this._setItemActive(this._drawItem, !this.eraserActive && !this.rulerActive && !this.adjustingPlane, TOOL_COLORS.draw);
+    this._setItemActive(this._eraserItem, this.eraserActive, TOOL_COLORS.eraser);
+    this._setItemActive(this._rulerItem, this.rulerActive, TOOL_COLORS.ruler);
+    this._setItemActive(this._moveItem, this.adjustingPlane, TOOL_COLORS.move);
+
+    // Show/hide conditional items
+    this._clearMeasItem.style.display = this.rulerActive ? 'flex' : 'none';
+    this._presetContainer.style.display = this.adjustingPlane ? 'flex' : 'none';
+  }
+
+  _setItemActive(item, isActive, colors) {
+    item._activeColor = isActive;
+    if (isActive) {
+      item.style.background = colors.bg;
+      item.style.color = colors.fg;
+    } else {
+      item.style.background = 'transparent';
+      item.style.color = '#444';
+    }
   }
 
   _showExportModal() {
