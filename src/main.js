@@ -15,7 +15,7 @@ const sceneManager = new SceneManager();
 const drawingPlane = new DrawingPlane(sceneManager.scene);
 const strokeManager = new StrokeManager(sceneManager.scene, drawingPlane, sceneManager.camera);
 const modeController = new ModeController();
-const layerPanel = new LayerPanel(strokeManager);
+const layerPanel = new LayerPanel(strokeManager, modeController.layersBtn);
 
 const projectManager = new ProjectManager(strokeManager, drawingPlane, sceneManager.camera, sceneManager.orbitControls, layerPanel);
 

@@ -4,7 +4,7 @@ import { createElement } from 'lucide';
 import {
   Palette, Pencil, Eraser, Ruler, Move,
   Undo2, Redo2, FilePlus, Save, FolderOpen,
-  Download, Trash2, ChevronDown
+  Download, Trash2, ChevronDown, Layers
 } from 'lucide';
 
 function lucideIcon(iconData, size = 18) {
@@ -92,6 +92,12 @@ export class ModeController {
     this._fileDropdown = this._buildFileDropdown();
     this._fileBtn = this._makeDropdownToggle(Save, 'File', this._fileDropdown);
 
+    // Separator
+    const sep3 = this._sep();
+
+    // Layers button
+    this.layersBtn = this._makeBtn(Layers, 'Layers');
+
     toolbar.append(
       this._brushBtn.wrapper,
       this._toolsBtn.wrapper,
@@ -99,7 +105,9 @@ export class ModeController {
       this.undoBtn,
       this.redoBtn,
       sep2,
-      this._fileBtn.wrapper
+      this._fileBtn.wrapper,
+      sep3,
+      this.layersBtn
     );
 
     document.body.appendChild(toolbar);

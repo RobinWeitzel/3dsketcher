@@ -1,5 +1,13 @@
 // src/LayerPanel.js
 
+import { createElement } from 'lucide';
+import { Eye, EyeOff, X } from 'lucide';
+
+function lucideIconHtml(iconData, size = 16) {
+  const el = createElement(iconData, { width: size, height: size, 'stroke-width': 2 });
+  return el.outerHTML;
+}
+
 let nextId = 1;
 
 function generateId() {
@@ -7,57 +15,30 @@ function generateId() {
 }
 
 export class LayerPanel {
-  constructor(strokeManager) {
+  constructor(strokeManager, toggleBtn) {
     this.strokeManager = strokeManager;
     this.layers = [];
     this.activeLayerId = null;
     this._changeCallbacks = [];
 
-    this._createPanel();
+    this._createPanel(toggleBtn);
     this.addLayer('Layer 1');
   }
 
-  _createPanel() {
-    // Toggle button with stacked-layers SVG icon
-    this.toggleBtn = document.createElement('button');
-    this.toggleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`;
-    this.toggleBtn.title = 'Layers';
-    this.toggleBtn.style.cssText = `
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      border: none;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      backdrop-filter: blur(8px);
-      color: #444;
-      cursor: pointer;
-      z-index: 101;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-      transition: background 0.15s;
-    `;
-    this.toggleBtn.addEventListener('pointerover', () => { this.toggleBtn.style.background = 'rgba(0,0,0,0.08)'; });
-    this.toggleBtn.addEventListener('pointerout', () => { this.toggleBtn.style.background = 'rgba(255,255,255,0.85)'; });
+  _createPanel(toggleBtn) {
+    // Use externally provided toggle button
+    this.toggleBtn = toggleBtn;
     this.toggleBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.panel.style.display = this.panel.style.display === 'none' ? 'flex' : 'none';
     });
-    document.body.appendChild(this.toggleBtn);
 
     // Panel
     this.panel = document.createElement('div');
     this.panel.style.cssText = `
       position: fixed;
-      top: 58px;
-      left: 12px;
+      bottom: 72px;
+      right: 12px;
       width: 210px;
       max-height: 400px;
       overflow-y: auto;
@@ -169,8 +150,8 @@ export class LayerPanel {
       `;
 
       const eyeBtn = document.createElement('button');
-      eyeBtn.textContent = layer.visible ? '\u{1F441}' : '\u2014';
-      eyeBtn.style.cssText = 'border: none; background: none; font-size: 15px; cursor: pointer; padding: 2px; min-width: 24px; line-height: 1;';
+      eyeBtn.innerHTML = lucideIconHtml(layer.visible ? Eye : EyeOff, 15);
+      eyeBtn.style.cssText = `border: none; background: none; cursor: pointer; padding: 2px; min-width: 24px; line-height: 1; color: ${layer.visible ? '#444' : '#bbb'}; display: flex; align-items: center; justify-content: center;`;
       eyeBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.toggleVisibility(layer.id); });
 
       const nameEl = document.createElement('span');
@@ -180,8 +161,8 @@ export class LayerPanel {
       row.addEventListener('pointerdown', (e) => { e.preventDefault(); this.setActiveLayer(layer.id); });
 
       const delBtn = document.createElement('button');
-      delBtn.textContent = '\u2715';
-      delBtn.style.cssText = 'border: none; background: none; color: #bbb; font-size: 13px; cursor: pointer; padding: 2px; transition: color 0.15s;';
+      delBtn.innerHTML = lucideIconHtml(X, 14);
+      delBtn.style.cssText = 'border: none; background: none; color: #bbb; cursor: pointer; padding: 2px; transition: color 0.15s; display: flex; align-items: center; justify-content: center;';
       delBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.removeLayer(layer.id); });
 
       row.append(eyeBtn, nameEl, delBtn);
