@@ -645,7 +645,9 @@ export class ModeController {
 
     modal.append(title, stlBtn, objBtn, cancelBtn);
     overlay.appendChild(modal);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    requestAnimationFrame(() => {
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    });
     document.body.appendChild(overlay);
   }
 
@@ -687,7 +689,9 @@ export class ModeController {
 
     modal.append(text, confirmBtn, cancelBtn);
     overlay.appendChild(modal);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    requestAnimationFrame(() => {
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    });
     document.body.appendChild(overlay);
   }
 
